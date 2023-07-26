@@ -7,7 +7,6 @@ import { Url } from 'next/dist/shared/lib/router/router';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ConfettiButton from './confettiButton';
-import "./VineyardNavbar.css";
 
 type Props = {
   links: Url[],
