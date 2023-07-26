@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react";
-import { Vector3, HemisphericLight, MeshBuilder, Scene, EngineOptions, SceneOptions } from "@babylonjs/core";
+import { Vector3, HemisphericLight, MeshBuilder, Scene, EngineOptions, SceneOptions, StandardMaterial, Color3, Mesh, Tools, Vector2, Material } from "@babylonjs/core";
 import SceneComponent from "./sceneComponent"; 
 import "./canvas.css";
 import { createCamera, resetCamera } from "./camera";
@@ -33,8 +33,53 @@ const onSceneReady = (scene: Scene) => {
   box.position.y = 1;
 
   // Our built-in 'ground' shape.
-  MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
+  let boardMat = new StandardMaterial("boardMat", scene);
+  boardMat.diffuseColor = Color3.FromHexString("#522b22");
+  let ground = MeshBuilder.CreateBox("board", { width: 10, depth: 10, height: 0.5 }, scene);
+  ground.position = Vector3.Up().scale(-0.5/2);
+  ground.material = boardMat;
 
+
+  const whiteMaterial = new StandardMaterial("White");
+  whiteMaterial.diffuseColor = Color3.FromHexString("#d4f0d3");
+
+  const blackMaterial = new StandardMaterial("Black");
+  blackMaterial.diffuseColor = Color3.FromHexString("#17171d");
+
+  function createTile(position: Vector2, positionOffset: Vector2, size: Vector2, material: StandardMaterial) {
+    const box = MeshBuilder.CreateBox(`${position.x}:${position.y}`, { height: 0.05, width: size.x, depth: size.y });
+    box.material = material;
+    position = position.add(positionOffset);
+    box.position = new Vector3(position.x + size.x/2, 0, position.y + size.y/2);
+  }
+
+  function createBoard(tiles: Vector2, size: Vector2) {
+    var material: StandardMaterial;
+    var positionOffset = size.scale(-0.5);
+    var position = Vector2.Zero();
+    var tileSize = size.divide(tiles);
+    for (let row = 0; row < tiles.x; row++) {
+        position.x = 0;
+        for (let col = 0; col < tiles.y; col++) {
+            if (row % 2 === col % 2) {
+                material = whiteMaterial;
+            } else {
+                material = blackMaterial;
+            }
+            createTile(position, positionOffset, tileSize, material);
+            position.x += tileSize.x;
+        }
+        position.y += tileSize.y;
+    }
+  }
+  createBoard(new Vector2(8,8), new Vector2(8,8));
+  scene.onPointerDown = function (evt, pickResult) {
+    // We try to pick an object
+    if (pickResult.hit) {
+        var name = pickResult.pickedMesh?.name;
+        console.log(`hit ${name}`);
+    }
+};
   // // GUI
   let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
   // let loadedGUI = advancedTexture.parseFromURLAsync("https://doc.babylonjs.com/examples/ColorPickerGui.json");
