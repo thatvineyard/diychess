@@ -16,9 +16,6 @@ const darkTheme = createTheme({
   type: 'dark',
   theme: {
     colors: {
-      white: '#0F0',
-      primary: '#F0F',
-      primarySolidContrast: '#FF0',
       mycolor: "#0F0",
     }, // optional
   }

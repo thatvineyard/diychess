@@ -1,10 +1,11 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import Link from 'next/link'
-import ConfettiButton from './confettiButton'
 import Theme from './theme'
-import NavButtons from './navButtons'
+import "./layout.css"
+import VineyardNavbar from './vineyardNavbar'
+import { Container } from '@nextui-org/react'
+import VineyardContainer from './vineyardContainer'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,16 +23,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <Theme>
-          <nav>
-            <NavButtons links={
-              ["/", "/checkers"]
-            }/>
-            <ul>
-              <li><Link href="/">Home</Link></li>
-              <li><Link href="./checkers">Checkers</Link></li>
-            </ul>
-          </nav>
-          {children}
+          <VineyardNavbar links={
+            ["/", "/checkers"]
+          } />
+          <main>
+            <VineyardContainer>
+              {children}
+            </VineyardContainer>
+          </main>
         </Theme>
       </body>
     </html>

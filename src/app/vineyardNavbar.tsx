@@ -7,15 +7,18 @@ import { Url } from 'next/dist/shared/lib/router/router';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ConfettiButton from './confettiButton';
+import "./VineyardNavbar.css";
 
 type Props = {
   links: Url[],
 }
 
-export default function NavButtons(props: Props) {
+export default function VineyardNavbar(props: Props) {
   const currentPage = usePathname();
   return (
-    <Navbar>
+    <Navbar css={{
+      background: "$background",
+    }}>
       <Navbar.Brand>
           <Navbar.Toggle showIn="xs" aria-label="toggle navigation" />
         oh hello
