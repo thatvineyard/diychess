@@ -2,18 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { Engine, EngineOptions, Scene, SceneOptions } from "@babylonjs/core";
+import { GameEngine } from "./engine/engine";
 
 type SceneComponentProps = {
-  antialias: boolean, 
-  engineOptions: EngineOptions, 
-  adaptToDeviceRatio: boolean, 
-  sceneOptions: SceneOptions, 
-  onRender: (scene: Scene) => void, 
-  onSceneReady: (scene: Scene) => void, 
+  gameEngine: GameEngine,
   id: string,
 }
 
-export default function SceneComponent({ antialias, engineOptions, adaptToDeviceRatio, sceneOptions, onRender, onSceneReady, id, ...rest }: SceneComponentProps) {
+export default function GameCanvas({ gameEngine, id, ...rest }: SceneComponentProps) {
   const reactCanvas = useRef(null);
 
   // set up basic engine and scene
@@ -22,16 +18,17 @@ export default function SceneComponent({ antialias, engineOptions, adaptToDevice
 
     if (!canvas) return;
 
-    const engine = new Engine(canvas, antialias, engineOptions, adaptToDeviceRatio);
-    const scene = new Scene(engine, sceneOptions);
+    const engine = new Engine(canvas, gameEngine.antialias, gameEngine.engineOptions, gameEngine.adaptToDeviceRatio);
+    const scene = new Scene(engine, gameEngine.sceneOptions);
+
     if (scene.isReady()) {
-      onSceneReady(scene);
+      gameEngine.start(scene);
     } else {
-      scene.onReadyObservable.addOnce((scene) => onSceneReady(scene));
+      scene.onReadyObservable.addOnce((scene) => gameEngine.start(scene));
     }
 
     engine.runRenderLoop(() => {
-      if (typeof onRender === "function") onRender(scene);
+      gameEngine.update(scene);
       scene.render();
     });
 
@@ -50,7 +47,7 @@ export default function SceneComponent({ antialias, engineOptions, adaptToDevice
         window.removeEventListener("resize", resize);
       }
     };
-  }, [antialias, engineOptions, adaptToDeviceRatio, sceneOptions, onRender, onSceneReady]);
+  }, [gameEngine]);
 
   return <canvas ref={reactCanvas} id={id} {...rest} />;
 };
