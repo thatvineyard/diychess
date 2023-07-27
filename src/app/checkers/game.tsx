@@ -5,17 +5,17 @@ import { createCamera, resetCamera } from "./engine/camera";
 import { GameEngine } from "./engine/engine";
 import { GameGui } from "./gui/gui";
 
-enum State { START = 0, PLAYER_TURN = 1, CPU_TURN = 2, PLAYER_WIN = 3, CPU_WIN = 4}
+enum State { START = 0, PLAYER_TURN = 1, CPU_TURN = 2, PLAYER_WIN = 3, CPU_WIN = 4 }
 
 class GameMachine {
-    // General Entire Application
-    private _scene: Scene;
-    private _canvas: HTMLCanvasElement;
-    private _engine: Engine;
+  // General Entire Application
+  private _scene: Scene;
+  private _canvas: HTMLCanvasElement;
+  private _engine: Engine;
 
-    constructor() {
-    }
-    
+  constructor() {
+  }
+
 }
 
 type Box = {
@@ -36,7 +36,7 @@ const onSceneReady = (scene: Scene) => {
 
   // Our built-in 'box' shape.s
   box = MeshBuilder.CreateBox("box", { size: 2 }, scene);
-  
+
 
   // Move the box upward 1/2 its height
   box.position.y = 1;
@@ -45,7 +45,7 @@ const onSceneReady = (scene: Scene) => {
   let boardMat = new StandardMaterial("boardMat", scene);
   boardMat.diffuseColor = Color3.FromHexString("#522b22");
   let ground = MeshBuilder.CreateBox("board", { width: 10, depth: 10, height: 0.5 }, scene);
-  ground.position = Vector3.Up().scale(-0.5/2);
+  ground.position = Vector3.Up().scale(-0.5 / 2);
   ground.material = boardMat;
 
 
@@ -59,7 +59,7 @@ const onSceneReady = (scene: Scene) => {
     const box = MeshBuilder.CreateBox(`${position.x}:${position.y}`, { height: 0.05, width: size.x, depth: size.y });
     box.material = material;
     position = position.add(positionOffset);
-    box.position = new Vector3(position.x + size.x/2, 0, position.y + size.y/2);
+    box.position = new Vector3(position.x + size.x / 2, 0, position.y + size.y / 2);
   }
 
   function createBoard(tiles: Vector2, size: Vector2) {
@@ -68,28 +68,28 @@ const onSceneReady = (scene: Scene) => {
     var position = Vector2.Zero();
     var tileSize = size.divide(tiles);
     for (let row = 0; row < tiles.x; row++) {
-        position.x = 0;
-        for (let col = 0; col < tiles.y; col++) {
-            if (row % 2 === col % 2) {
-                material = whiteMaterial;
-            } else {
-                material = blackMaterial;
-            }
-            createTile(position, positionOffset, tileSize, material);
-            position.x += tileSize.x;
+      position.x = 0;
+      for (let col = 0; col < tiles.y; col++) {
+        if (row % 2 === col % 2) {
+          material = whiteMaterial;
+        } else {
+          material = blackMaterial;
         }
-        position.y += tileSize.y;
+        createTile(position, positionOffset, tileSize, material);
+        position.x += tileSize.x;
+      }
+      position.y += tileSize.y;
     }
   }
-  createBoard(new Vector2(8,8), new Vector2(8,8));
+  createBoard(new Vector2(8, 8), new Vector2(8, 8));
   scene.onPointerDown = function (evt, pickResult) {
     // We try to pick an object
     if (pickResult.hit) {
-        var name = pickResult.pickedMesh?.name;
-        console.log(`hit ${name}`);
+      var name = pickResult.pickedMesh?.name;
+      console.log(`hit ${name}`);
     }
-};
-  
+  };
+
   let gameGui = new GameGui(scene);
   gameGui.registerAction("button_reset_cam", () => resetCamera(scene));
 };
@@ -110,8 +110,8 @@ const onRender = (scene: Scene) => {
 
 export default function Game() {
   var gameEngine = new GameEngine(onRender, onSceneReady);
-  
+
   return (
-    <GameCanvas gameEngine={gameEngine} id="my-canvas"/>
+    <GameCanvas gameEngine={gameEngine} id="my-canvas" />
   )
 }
