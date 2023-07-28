@@ -5,6 +5,7 @@ export class Board {
 
   private whiteMaterial: StandardMaterial;
   private blackMaterial: StandardMaterial;
+  private selectedPawn?: Pawn;
   private pawn!: Pawn;
   private scene!: Scene;
 
@@ -62,6 +63,19 @@ export class Board {
         (event) => { this.pawn.toggleLift(event.source) }
       )
     )
+    // let pawnManager = new ActionManager(this.scene);
+    // pawnManager.registerAction(
+    //   new ExecuteCodeAction({
+    //     trigger: ActionManager.OnPickTrigger,
+    //   },
+    //     (event) => { 
+    //       if(event.source instanceof Mesh) {
+    //         event.source.
+    //       }
+    //       this.pawn.toggleLift(event.source) 
+    //     }
+    //   )
+    // )
 
     this.createBoard(new Vector2(8, 8), new Vector2(8, 8), tileManager);
   }
