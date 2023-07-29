@@ -4,7 +4,7 @@ import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { createCamera, resetCamera } from "./engine/camera";
 import { GameEngine } from "./engine/engine";
 import { GameGui } from "./gui/gui";
-import { Board } from "../board";
+import { Board } from "./board/board";
 
 enum State { START = 0, PLAYER_TURN = 1, CPU_TURN = 2, PLAYER_WIN = 3, CPU_WIN = 4 }
 

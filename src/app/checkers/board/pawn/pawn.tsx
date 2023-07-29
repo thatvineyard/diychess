@@ -1,6 +1,6 @@
-import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, Scene, Sound, Space, Vector3 } from "@babylonjs/core";
+import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Nullable, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
 import { Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
-import { FRAMES_PER_SECOND } from "./engine/engine";
+import { FRAMES_PER_SECOND } from "../../engine/engine";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
@@ -16,13 +16,12 @@ export class Pawn {
   private pickupSound: Sound;
   private scene: Scene;
 
-  constructor(diameter: number, scene: Scene) {
+  constructor(diameter: number, position: Vector2, scene: Scene) {
     this.scene = scene;
 
     this.pawn = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
-    this.pawn.position = Vector3.Up().scale(PLACED_HEIGHT);
-    this.pawn.parent
-
+    this.pawn.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
+    
     this.shakeAnimation = new Animation("pawn_shake", "rotation.z", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
     this.shakeAnimation.setKeys(
       [
@@ -51,16 +50,14 @@ export class Pawn {
     placeEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.placeAnimation.setEasingFunction(placeEase);
 
-    this.state = State.NOT_DEFINED;
+    this.pawn.actionManager = new PawnActionManager(this, scene);
+
+    this.state = State.PLACED;
 
     this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false });
-
-    this.lift();
   }
 
-  public setActionManager(actionManager: ActionManager) {
-    this.pawn.actionManager = actionManager;
-  }
+  public onLift() {}
 
   public toggleLift(placement: Mesh) {
     switch (this.state) {
@@ -76,6 +73,7 @@ export class Pawn {
   }
 
   public lift() {
+    this.onLift();
     this.pawn.animations.push(this.liftAnimation);
     this.pickupSound.play();
     this.scene.beginDirectAnimation(this.pawn, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false);
@@ -97,4 +95,19 @@ export class Pawn {
     this.state = State.PLACED;
   }
 
+}
+
+
+class PawnActionManager extends ActionManager {
+
+  constructor(pawn: Pawn, scene?: Nullable<Scene> | undefined) {
+    super(scene);
+      this.registerAction(
+        new ExecuteCodeAction({
+          trigger: ActionManager.OnPickTrigger,
+        },
+          (event) => { pawn.toggleLift(event.source) }
+        )
+      )
+  }
 }

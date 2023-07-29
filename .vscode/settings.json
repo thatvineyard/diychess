@@ -1,4 +1,7 @@
 {
+  "terminal.integrated.env.windows": {
+    "PROJECT_URL": "https://localhost:3000"
+  },
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#ff6433",
     "activityBar.background": "#ff6433",
