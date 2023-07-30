@@ -1,7 +1,7 @@
-import { StandardMaterial, Color3, Vector2, Mesh, MeshBuilder, Vector3, ActionManager, Sound, ExecuteCodeAction, Scene, Nullable, Condition, PredicateCondition } from "@babylonjs/core";
+import { StandardMaterial, Color3, Vector2, Mesh, MeshBuilder, Vector3, ActionManager, Sound, ExecuteCodeAction, Scene, Nullable, Condition, PredicateCondition, TransformNode } from "@babylonjs/core";
 import { Pawn } from "./pawn/pawn";
 
-export class Board {
+export class Board extends TransformNode {
 
   private whiteMaterial: StandardMaterial;
   private blackMaterial: StandardMaterial;
@@ -10,7 +10,10 @@ export class Board {
   private dimensions: Vector2 = Vector2.One().scale(8);
   private tileSize: Vector2 = Vector2.One();
 
-  constructor(scene: Scene) {
+  constructor(name: string, scene: Scene) {
+    super(name, scene);
+    this.scene = scene;
+
     this.whiteMaterial = new StandardMaterial("White");
     this.whiteMaterial.diffuseColor = Color3.FromHexString("#d4f0d3");
 
@@ -20,10 +23,11 @@ export class Board {
     this.setup(scene);
   }
 
-  private createTile(position: Vector2, size: Vector2, material: StandardMaterial): Mesh {
-    const box = MeshBuilder.CreateBox(`${position.x}:${position.y}`, { height: 0.05, width: size.x, depth: size.y });
+  private createTile(name: string, position: Vector2, size: Vector2, material: StandardMaterial): Mesh {
+    const box = MeshBuilder.CreateBox(name, { height: 0.05, width: size.x, depth: size.y });
     box.material = material;
     box.position = new Vector3(position.x, 0, position.y);
+    box.parent = this;
     return box;
   }
 
@@ -32,27 +36,29 @@ export class Board {
     return tile.multiply(this.tileSize).add(positionOffset);
   }
 
+
+  private getTileName(tile: Vector2) {
+    return `${String.fromCharCode('A'.charCodeAt(0) + tile.y)}${tile.x + 1}`;
+  }
+
   private createBoard(tiles: Vector2, size: Vector2, scene: Scene) {
     this.dimensions = tiles;
     var material: StandardMaterial;
-    var positionOffset = size.scale(-0.5);
     var position = Vector2.Zero();
     this.tileSize = size.divide(this.dimensions);
     var tile: Mesh;
-    var pawn: Pawn;
-    for (let row = 0; row < this.dimensions.x; row++) {
+    var position = Vector2.Zero();
+    for (position.x = 0; position.x < this.dimensions.x; position.x++) {
       // position.x = 0;
-      for (let col = 0; col < this.dimensions.y; col++) {
-        if (row % 2 === col % 2) {
+      for (position.y = 0; position.y < this.dimensions.y; position.y++) {
+        if (position.x % 2 === position.y % 2) {
           material = this.whiteMaterial;
         } else {
           material = this.blackMaterial;
         }
-        tile = this.createTile(this.getTilePosition(new Vector2(row, col)), this.tileSize, material);
+        tile = this.createTile(this.getTileName(position), this.getTilePosition(position), this.tileSize, material);
         tile.actionManager = new TileActionManager(this, scene);
-        // position.x += this.tileSize.x;
       }
-      // position.y += this.tileSize.y;
     }
   }
 
@@ -68,7 +74,12 @@ export class Board {
   }
 
   setup(scene: Scene) {
-    this.scene = scene;
+
+    let boardMat = new StandardMaterial("boardMat", scene);
+    boardMat.diffuseColor = Color3.FromHexString("#522b22");
+    let ground = MeshBuilder.CreateBox("board", { width: 10, depth: 10, height: 0.5 }, scene);
+    ground.position = Vector3.Up().scale(-0.5 / 2);
+    ground.material = boardMat;
 
     this.createBoard(new Vector2(8, 8), new Vector2(8, 8), scene);
     this.createPawns((tile: Vector2) => {

@@ -4,10 +4,22 @@ import { animateCamera } from "./cameraAnimation";
 
 const DEFAULT_CAMERA_NAME = "camera_main";
 
-const DEFAULT_CAMERA_ALPHA = Tools.ToRadians(90);
+const DEFAULT_CAMERA_ALPHA = Tools.ToRadians(-90);
 const DEFAULT_CAMERA_BETA = Tools.ToRadians(65);
 const DEFAULT_CAMERA_RADIUS = 10;
 const DEFAULT_CAMERA_TARGET = Vector3.Zero();
+
+export function createCamera(scene: Scene) {
+  console.log("new camera");
+  const camera = new ArcRotateCamera(DEFAULT_CAMERA_NAME, DEFAULT_CAMERA_ALPHA, DEFAULT_CAMERA_BETA, DEFAULT_CAMERA_RADIUS, DEFAULT_CAMERA_TARGET, scene);
+
+  camera.wheelDeltaPercentage = 0.01;
+  camera.zoomToMouseLocation = true;
+
+  // This attaches the camera to the canvas
+  const canvas = scene.getEngine().getRenderingCanvas();
+  camera.attachControl(canvas, true);
+}
 
 export function getCamera(scene: Scene): ArcRotateCamera {
   var camera = scene.getCameraByName(DEFAULT_CAMERA_NAME);
@@ -21,17 +33,6 @@ export function getCamera(scene: Scene): ArcRotateCamera {
 export function debugLogCamera(scene: Scene) {
   var camera = getCamera(scene);
   console.debug({ target: camera.getTarget().toString(), position: camera.position.toString() });
-}
-
-export function createCamera(scene: Scene) {
-  const camera = new ArcRotateCamera(DEFAULT_CAMERA_NAME, DEFAULT_CAMERA_ALPHA, DEFAULT_CAMERA_BETA, DEFAULT_CAMERA_RADIUS, DEFAULT_CAMERA_TARGET, scene);
-
-  camera.wheelDeltaPercentage = 0.01;
-  camera.zoomToMouseLocation = true;
-
-  // This attaches the camera to the canvas
-  const canvas = scene.getEngine().getRenderingCanvas();
-  camera.attachControl(canvas, true);
 }
 
 export function resetCamera(

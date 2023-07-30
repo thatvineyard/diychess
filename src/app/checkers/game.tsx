@@ -1,7 +1,6 @@
-import { Action, ActionManager, Color3, Engine, EngineOptions, ExecuteCodeAction, HemisphericLight, Mesh, MeshBuilder, Scene, SceneOptions, Sound, StandardMaterial, Vector2, Vector3 } from "@babylonjs/core";
+import { Color3, Engine, HemisphericLight, MeshBuilder, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 import GameCanvas from "./gameCanvas";
-import { AdvancedDynamicTexture } from "@babylonjs/gui";
-import { createCamera, resetCamera } from "./engine/camera";
+import { resetCamera } from "./engine/camera";
 import { GameEngine } from "./engine/engine";
 import { GameGui } from "./gui/gui";
 import { Board } from "./board/board";
@@ -43,14 +42,8 @@ const onSceneReady = (scene: Scene) => {
   // box.position.y = 1;
 
   // Our built-in 'ground' shape.
-  let boardMat = new StandardMaterial("boardMat", scene);
-  boardMat.diffuseColor = Color3.FromHexString("#522b22");
-  let ground = MeshBuilder.CreateBox("board", { width: 10, depth: 10, height: 0.5 }, scene);
-  ground.position = Vector3.Up().scale(-0.5 / 2);
-  ground.material = boardMat;
 
-
-  let board = new Board(scene);
+  let board = new Board('board', scene);
 
   let gameGui = new GameGui(scene);
   gameGui.registerAction("button_reset_cam", () => resetCamera(scene));
