@@ -16,8 +16,10 @@ export class Board extends TransformNode {
 
   public whiteSquareMaterial: StandardMaterial;
   public whitePawnMaterial: StandardMaterial;
+  public whitePawnGhostMaterial: StandardMaterial;
   public blackSquareMaterial: StandardMaterial;
   public blackPawnMaterial: StandardMaterial;
+  public blackPawnGhostMaterial: StandardMaterial;
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
@@ -36,9 +38,13 @@ export class Board extends TransformNode {
 
     this.whitePawnMaterial = new StandardMaterial("White");
     this.whitePawnMaterial.diffuseColor = Color3.FromHexString("#e4b293");
+    this.whitePawnGhostMaterial = this.whitePawnMaterial.clone("WhiteGhost");
+    this.whitePawnGhostMaterial.alpha = 0.2;
 
     this.blackPawnMaterial = new StandardMaterial("Black");
     this.blackPawnMaterial.diffuseColor = Color3.FromHexString("#503b3b");
+    this.blackPawnGhostMaterial = this.whitePawnMaterial.clone("BlackGhost");
+    this.blackPawnGhostMaterial.alpha = 0.2;
 
     this.boardConfiguration = {
       dimensions: new Vector2(10, 10),
@@ -81,24 +87,30 @@ export class Board extends TransformNode {
     return String.fromCharCode('A'.charCodeAt(0) + rank);
   }
 
+  public foreachSquare(callback: (position: Vector2) => void) {
+    var position = Vector2.Zero();
+    for (position.x = 0; position.x < this.boardConfiguration.dimensions.x; position.x++) {
+      // position.x = 0;
+      for (position.y = 0; position.y < this.boardConfiguration.dimensions.y; position.y++) {
+        callback(position);
+      }
+    }
+  }
+
   private createSquares() {
     var material: StandardMaterial;
     var position = Vector2.Zero();
     var tileSize = this.getTileSize();
     var tile: Mesh;
-    var position = Vector2.Zero();
-    for (position.x = 0; position.x < this.boardConfiguration.dimensions.x; position.x++) {
-      // position.x = 0;
-      for (position.y = 0; position.y < this.boardConfiguration.dimensions.y; position.y++) {
-        if (position.x % 2 === position.y % 2) {
-          material = this.whiteSquareMaterial;
-        } else {
-          material = this.blackSquareMaterial;
-        }
-        tile = this.createTile(this.getTileName(position), this.getTilePosition(position), tileSize, material);
-        tile.actionManager = new TileActionManager(this, this.scene);
+    this.foreachSquare((position) => {
+      if (position.x % 2 === position.y % 2) {
+        material = this.whiteSquareMaterial;
+      } else {
+        material = this.blackSquareMaterial;
       }
-    }
+      tile = this.createTile(this.getTileName(position), this.getTilePosition(position), tileSize, material);
+      tile.actionManager = new TileActionManager(this, this.scene);
+    })
   }
 
   private createPawns(placeWhiteRules: SquareSelectionRule[], placeBlackRules: SquareSelectionRule[]) {
@@ -117,13 +129,13 @@ export class Board extends TransformNode {
 
         if (placeWhite) {
           let pawn = new Pawn(true, this, new Vector2(row, col), this.scene);
-          pawn.onLift = () => { this.selectedPawn = pawn };
+          pawn.onLift = () => { this.selectPawn(pawn); };
           continue;
         }
 
         if (placeBlack) {
           let pawn = new Pawn(false, this, new Vector2(row, col), this.scene);
-          pawn.onLift = () => { this.selectedPawn = pawn };
+          pawn.onLift = () => { this.selectPawn(pawn) };
           continue;
         }
       }
@@ -213,7 +225,19 @@ export class Board extends TransformNode {
 
     this.createPawns([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
   }
+
+  public selectPawn(pawn: Pawn) {
+    this.selectedPawn = pawn;
+    this.selectedPawn.calcAvailableMoves();
+    this.selectedPawn.showAvailableMoves();
+  }
+
+  public deselectPawn() {
+    this.selectedPawn?.hideAvailableMoves();
+    this.selectedPawn = undefined;
+  }
 }
+
 
 class TileActionManager extends ActionManager {
 
@@ -225,7 +249,7 @@ class TileActionManager extends ActionManager {
       },
         (event) => {
           board.selectedPawn?.place(event.source);
-          board.selectedPawn = undefined;
+          board.deselectPawn();
         },
         new PredicateCondition(this, () => { return board.selectedPawn != undefined })
       )
