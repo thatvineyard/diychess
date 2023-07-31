@@ -38,6 +38,10 @@ const onSceneReady = (scene: Scene) => {
 
   let gameGui = new GameGui(scene);
   gameGui.registerAction("button_reset_cam", () => resetCamera(scene));
+  gameGui.registerAction("button_reset_game", () => {
+    board.dispose();
+    board = new Board('board', scene);
+  });
 };
 
 

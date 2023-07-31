@@ -139,6 +139,7 @@ export class Board extends TransformNode {
 
     const boardBoxMeshSize = this.boardConfiguration.meshSize
     let boardText = MeshBuilder.CreatePlane("boardText", { width: boardBoxMeshSize.x, height: boardBoxMeshSize.y }, this.scene);
+    boardText.parent = this;
     boardText.rotate(Vector3.Left(), Tools.ToRadians(-90));
     boardText.translate(Vector3.Up(), 0.01, Space.WORLD);
 
@@ -198,6 +199,7 @@ export class Board extends TransformNode {
     boardMat.diffuseColor = Color3.FromHexString("#522b22");
     const boardBoxMeshSize = this.boardConfiguration.meshSize
     let boardBox = MeshBuilder.CreateBox("board", { width: boardBoxMeshSize.x, depth: boardBoxMeshSize.y, height: boardBoxMeshSize.z }, this.scene);
+    boardBox.parent = this;
     boardBox.position = Vector3.Up().scale(-0.5 / 2);
     boardBox.material = boardMat;
 

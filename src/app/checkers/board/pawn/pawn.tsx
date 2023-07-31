@@ -29,6 +29,7 @@ export class Pawn {
 
     this.pawn = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
     this.pawn.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
+    this.pawn.parent = board;
     this.pawn.material = isWhite ? this.board.whitePawnMaterial : this.board.blackPawnMaterial;
     
     this.shakeAnimation = new Animation("pawn_shake", "rotation.z", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
