@@ -34,15 +34,6 @@ const onSceneReady = (scene: Scene) => {
   // Default intensity is 1. Let's dim the light a small amount
   light.intensity = 0.7;
 
-  // Our built-in 'box' shape.s
-  // box = MeshBuilder.CreateBox("box", { size: 2 }, scene);
-
-
-  // Move the box upward 1/2 its height
-  // box.position.y = 1;
-
-  // Our built-in 'ground' shape.
-
   let board = new Board('board', scene);
 
   let gameGui = new GameGui(scene);
@@ -54,13 +45,7 @@ const onSceneReady = (scene: Scene) => {
  * Will run on every frame render.  We are spinning the box on y-axis.
  */
 const onRender = (scene: Scene) => {
-  // if (box !== undefined) {
-  //   const deltaTimeInMillis = scene.getEngine().getDeltaTime();
-
-  //   const rpm = 10;
-  //   box.rotation.y += (rpm / 60) * Math.PI * 2 * (deltaTimeInMillis / 1000);
-  // }
-  frames++;
+  // frames++;
 };
 
 export default function Game() {
@@ -70,3 +55,5 @@ export default function Game() {
     <GameCanvas gameEngine={gameEngine} id="my-canvas" />
   )
 }
+
+export class GameRuleError extends Error {}

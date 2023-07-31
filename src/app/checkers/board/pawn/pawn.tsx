@@ -1,9 +1,11 @@
-import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Nullable, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
+import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Material, Nullable, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
 import { Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
 import { FRAMES_PER_SECOND } from "../../engine/engine";
+import { Board } from "../board";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
+const MESH_SCALE = 0.85;
 enum State { NOT_DEFINED, LIFTED, PLACED }
 
 export class Pawn {
@@ -15,12 +17,19 @@ export class Pawn {
   private placeAnimation: Animation;
   private pickupSound: Sound;
   private scene: Scene;
+  private board: Board;
 
-  constructor(diameter: number, position: Vector2, scene: Scene) {
+  constructor(isWhite: boolean, board: Board, coordinate: Vector2, scene: Scene) {
     this.scene = scene;
+
+    this.board = board;
+    const diameter = Math.min(this.board.getTileSize().y, this.board.getTileSize().x) * MESH_SCALE;
+
+    const position = this.board.getTilePosition(coordinate);
 
     this.pawn = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
     this.pawn.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
+    this.pawn.material = isWhite ? this.board.whitePawnMaterial : this.board.blackPawnMaterial;
     
     this.shakeAnimation = new Animation("pawn_shake", "rotation.z", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
     this.shakeAnimation.setKeys(

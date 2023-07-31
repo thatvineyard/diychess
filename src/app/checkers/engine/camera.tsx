@@ -5,8 +5,8 @@ import { animateCamera } from "./cameraAnimation";
 const DEFAULT_CAMERA_NAME = "camera_main";
 
 const DEFAULT_CAMERA_ALPHA = Tools.ToRadians(-90);
-const DEFAULT_CAMERA_BETA = Tools.ToRadians(65);
-const DEFAULT_CAMERA_RADIUS = 10;
+const DEFAULT_CAMERA_BETA = Tools.ToRadians(45);
+const DEFAULT_CAMERA_RADIUS = 25;
 const DEFAULT_CAMERA_TARGET = Vector3.Zero();
 
 export function createCamera(scene: Scene) {
@@ -15,6 +15,8 @@ export function createCamera(scene: Scene) {
 
   camera.wheelDeltaPercentage = 0.01;
   camera.zoomToMouseLocation = true;
+
+  camera.fov = 0.4;
 
   // This attaches the camera to the canvas
   const canvas = scene.getEngine().getRenderingCanvas();
