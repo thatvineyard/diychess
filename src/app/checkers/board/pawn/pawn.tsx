@@ -3,6 +3,7 @@ import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
 import { FRAMES_PER_SECOND } from "../../engine/engine";
 import { Board } from "../board";
 import { Square } from "../square";
+import { Move, MoveType } from "./move";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
@@ -22,73 +23,10 @@ export class Pawn {
   private pickupSound: Sound;
   private scene: Scene;
   private board: Board;
-  public availableMoves: Map<string, { square: Square, instance: InstancedMesh | undefined }> = new Map();
+  public availableMoves: Map<string, { move: Move, instance: InstancedMesh | undefined }> = new Map();
   private hightlightedMove?: Vector2;
   private isWhite: boolean;
   private currentSquare: Square;
-
-  public calcAvailableMoves() {
-    this.availableMoves = new Map();
-    let distance = 1;
-    this.board.foreachSquare((square: Square) => {
-      if(square.hasPawn()) {
-        return false;
-      }
-      let difference = square.coordinate.subtract(this.coordinate);
-      if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
-        this.availableMoves.set(square.coordinate.toString(), { square: square, instance: undefined });
-      }
-    });
-    this.availableMoves.set(this.coordinate.toString(), { square: this.currentSquare, instance: undefined });
-  }
-
-  public showAvailableMoves() {
-    this.availableMoves.forEach((move, _) => {
-      move.instance = this.createGhostInstance(move.square.coordinate);
-    });
-  }
-
-  public createGhostInstance(coordinate: Vector2) {
-    let newInstance = this.ghost.createInstance(`${this.mesh.name} move: ${coordinate.x}:${coordinate.y}`);
-    newInstance.isPickable = false;
-    newInstance.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
-    return newInstance;
-  }
-
-  public hideAvailableMoves() {
-    this.unhighlightAvailableMove();
-    this.availableMoves.forEach((move, coordinate) => {
-      move.instance?.dispose();
-      move.instance = undefined;
-    });
-  }
-
-  public highlightSquare(square: Square) {
-    if (this.availableMoves.has(square.coordinate.toString())) {
-      this.hightlightedMove = square.coordinate;
-
-      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
-      if (ghostMove != null) {
-        ghostMove.instance?.dispose();
-        ghostMove.instance = undefined;
-      }
-
-      this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(square.coordinate));
-      this.highlighedGhost.setEnabled(true);
-    }
-  }
-
-  public unhighlightAvailableMove() {
-    if (this.hightlightedMove != null) {
-      this.highlighedGhost.setEnabled(false);
-
-      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
-      if (ghostMove != null) {
-        ghostMove.instance = this.createGhostInstance(ghostMove.square.coordinate);
-      }
-      this.hightlightedMove = undefined;
-    }
-  }
 
   constructor(isWhite: boolean, board: Board, square: Square, scene: Scene) {
     this.scene = scene;
@@ -114,7 +52,7 @@ export class Pawn {
     this.ghost.setEnabled(false);
 
     this.highlighedGhost = this.ghost.clone();
-    this.highlighedGhost.material = this.isWhite ? this.board.whitePawnGhostHighlightMaterial : this.board.blackPawnGhostHighlightMaterial;
+    this.highlighedGhost.material = this.board.moveGhostHighlightMaterial;
     this.highlighedGhost.isPickable = false;
     this.highlighedGhost.setEnabled(false);
 
@@ -153,6 +91,83 @@ export class Pawn {
     this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false });
   }
 
+  public calcAvailableMoves() {
+    this.availableMoves = new Map();
+    let distance = 1;
+    this.board.foreachSquare((square: Square) => {
+      if (square.hasPawn()) {
+        return false;
+      }
+      let difference = square.coordinate.subtract(this.coordinate);
+      if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
+        this.availableMoves.set(square.coordinate.toString(), { move: new Move(square, MoveType.MOVE), instance: undefined });
+      }
+    });
+    this.availableMoves.set(this.coordinate.toString(), { move: new Move(this.currentSquare, MoveType.RESET), instance: undefined });
+  }
+
+  public showAvailableMoves() {
+    this.availableMoves.forEach((availableMove, _) => {
+      availableMove.instance = this.createGhostInstance(availableMove.move.square.coordinate);
+    });
+  }
+
+  public createGhostInstance(coordinate: Vector2) {
+    let newInstance = this.ghost.createInstance(`${this.mesh.name} move: ${coordinate.x}:${coordinate.y}`);
+    newInstance.isPickable = false;
+    newInstance.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
+    return newInstance;
+  }
+
+  public hideAvailableMoves() {
+    this.unhighlightAvailableMove();
+    this.availableMoves.forEach((move, coordinate) => {
+      move.instance?.dispose();
+      move.instance = undefined;
+    });
+  }
+
+  public highlightSquare(square: Square) {
+    if (this.availableMoves.has(square.coordinate.toString())) {
+      this.hightlightedMove = square.coordinate;
+
+      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
+      if (ghostMove != null) {
+        ghostMove.instance?.dispose();
+        ghostMove.instance = undefined;
+
+        this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(square.coordinate));
+        this.highlighedGhost.material = this.getHighlightMaterial(ghostMove.move.moveType);
+        this.highlighedGhost.setEnabled(true);
+
+      }
+    }
+  }
+
+  private getHighlightMaterial(moveType: MoveType) {
+    switch (moveType) {
+      case MoveType.MOVE:
+        return this.board.moveGhostHighlightMaterial;
+      case MoveType.ATTACK:
+        return this.board.attackGhostHighlightMaterial;
+      case MoveType.RESET:
+        return this.board.resetGhostHighlightMaterial;
+    };
+
+  }
+
+  public unhighlightAvailableMove() {
+    if (this.hightlightedMove != null) {
+      this.highlighedGhost.setEnabled(false);
+
+      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
+      if (ghostMove != null) {
+        ghostMove.instance = this.createGhostInstance(ghostMove.move.square.coordinate);
+      }
+      this.hightlightedMove = undefined;
+    }
+  }
+
   private toPlacedPosition(position: Vector2) {
     return new Vector3(position.x, PLACED_HEIGHT, position.y);
   }
@@ -175,7 +190,7 @@ export class Pawn {
     this.scene.stopAnimation(this.mesh);
 
     this.coordinate = square.coordinate;
-    
+
     this.currentSquare?.removePawn();
     square.placePawn(this);
     this.currentSquare = square;

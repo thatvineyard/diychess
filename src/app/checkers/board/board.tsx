@@ -18,15 +18,16 @@ export class Board extends TransformNode {
   public whiteSquareMaterial: StandardMaterial;
   public whitePawnMaterial: StandardMaterial;
   public whitePawnGhostMaterial: StandardMaterial;
-  public whitePawnGhostHighlightMaterial: StandardMaterial;
   public blackSquareMaterial: StandardMaterial;
   public blackPawnMaterial: StandardMaterial;
   public blackPawnGhostMaterial: StandardMaterial;
-  public blackPawnGhostHighlightMaterial: StandardMaterial;
+  public moveGhostHighlightMaterial: StandardMaterial;
+  public resetGhostHighlightMaterial: StandardMaterial;
+  public attackGhostHighlightMaterial: StandardMaterial;
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
-  private squares: Map<string, Square>;
+  private squares: Map<string, Square> = new Map();
 
   public boardConfiguration: BoardConfiguration;
 
@@ -44,17 +45,23 @@ export class Board extends TransformNode {
     this.whitePawnMaterial.diffuseColor = Color3.FromHexString("#e4b293");
     this.whitePawnGhostMaterial = this.whitePawnMaterial.clone("WhiteGhost");
     this.whitePawnGhostMaterial.alpha = 0.2;
-    this.whitePawnGhostHighlightMaterial = this.whitePawnGhostMaterial.clone("WhiteGhost");
-    this.whitePawnGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
-    this.whitePawnGhostHighlightMaterial.alpha = 0.4;
 
     this.blackPawnMaterial = new StandardMaterial("Black");
     this.blackPawnMaterial.diffuseColor = Color3.FromHexString("#503b3b");
     this.blackPawnGhostMaterial = this.blackPawnMaterial.clone("BlackGhost");
     this.blackPawnGhostMaterial.alpha = 0.2;
-    this.blackPawnGhostHighlightMaterial = this.blackPawnGhostMaterial.clone("BlackGhost");
-    this.blackPawnGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
-    this.blackPawnGhostHighlightMaterial.alpha = 0.4;
+    
+    this.moveGhostHighlightMaterial = new StandardMaterial("moveGhostHighlight")
+    this.moveGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
+    this.moveGhostHighlightMaterial.alpha = 0.4;
+    
+    this.resetGhostHighlightMaterial = new StandardMaterial("resetGhostHighlight")
+    this.resetGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#0000ff");
+    this.resetGhostHighlightMaterial.alpha = 0.4;
+    
+    this.attackGhostHighlightMaterial = new StandardMaterial("attackGhostHighlight")
+    this.attackGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#ff0000");
+    this.attackGhostHighlightMaterial.alpha = 0.4;
 
     this.boardConfiguration = {
       dimensions: new Vector2(10, 10),
