@@ -1,9 +1,10 @@
 import { StandardMaterial, Color3, Vector2, Mesh, MeshBuilder, Vector3, ActionManager, Sound, ExecuteCodeAction, Scene, Nullable, Condition, PredicateCondition, TransformNode, Axis, Tools, Space } from "@babylonjs/core";
 import { Pawn } from "./pawn/pawn";
 import { GameRuleError } from "../game";
-import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./SquareSelectionRule";
+import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./squareSelectionRule";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { textSpanContainsTextSpan } from "typescript";
+import { Square } from "./square";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -17,9 +18,11 @@ export class Board extends TransformNode {
   public whiteSquareMaterial: StandardMaterial;
   public whitePawnMaterial: StandardMaterial;
   public whitePawnGhostMaterial: StandardMaterial;
+  public whitePawnGhostHighlightMaterial: StandardMaterial;
   public blackSquareMaterial: StandardMaterial;
   public blackPawnMaterial: StandardMaterial;
   public blackPawnGhostMaterial: StandardMaterial;
+  public blackPawnGhostHighlightMaterial: StandardMaterial;
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
@@ -40,11 +43,17 @@ export class Board extends TransformNode {
     this.whitePawnMaterial.diffuseColor = Color3.FromHexString("#e4b293");
     this.whitePawnGhostMaterial = this.whitePawnMaterial.clone("WhiteGhost");
     this.whitePawnGhostMaterial.alpha = 0.2;
+    this.whitePawnGhostHighlightMaterial = this.whitePawnGhostMaterial.clone("WhiteGhost");
+    this.whitePawnGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
+    this.whitePawnGhostHighlightMaterial.alpha = 0.4;
 
     this.blackPawnMaterial = new StandardMaterial("Black");
     this.blackPawnMaterial.diffuseColor = Color3.FromHexString("#503b3b");
-    this.blackPawnGhostMaterial = this.whitePawnMaterial.clone("BlackGhost");
+    this.blackPawnGhostMaterial = this.blackPawnMaterial.clone("BlackGhost");
     this.blackPawnGhostMaterial.alpha = 0.2;
+    this.blackPawnGhostHighlightMaterial = this.blackPawnGhostMaterial.clone("BlackGhost");
+    this.blackPawnGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
+    this.blackPawnGhostHighlightMaterial.alpha = 0.4;
 
     this.boardConfiguration = {
       dimensions: new Vector2(10, 10),
@@ -54,14 +63,6 @@ export class Board extends TransformNode {
     }
 
     this.setup();
-  }
-
-  private createTile(name: string, position: Vector2, size: Vector2, material: StandardMaterial): Mesh {
-    const box = MeshBuilder.CreateBox(name, { height: 0.05, width: size.x, depth: size.y });
-    box.material = material;
-    box.position = new Vector3(position.x, 0, position.y);
-    box.parent = this;
-    return box;
   }
 
   public getTilePosition(tile: Vector2) {
@@ -101,15 +102,13 @@ export class Board extends TransformNode {
     var material: StandardMaterial;
     var position = Vector2.Zero();
     var tileSize = this.getTileSize();
-    var tile: Mesh;
-    this.foreachSquare((position) => {
-      if (position.x % 2 === position.y % 2) {
+    this.foreachSquare((coordinate) => {
+      if (coordinate.x % 2 === coordinate.y % 2) {
         material = this.whiteSquareMaterial;
       } else {
         material = this.blackSquareMaterial;
       }
-      tile = this.createTile(this.getTileName(position), this.getTilePosition(position), tileSize, material);
-      tile.actionManager = new TileActionManager(this, this.scene);
+      new Square(this.getTileName(coordinate), coordinate.clone(), tileSize, material, this, this.scene);
     })
   }
 
@@ -235,24 +234,5 @@ export class Board extends TransformNode {
   public deselectPawn() {
     this.selectedPawn?.hideAvailableMoves();
     this.selectedPawn = undefined;
-  }
-}
-
-
-class TileActionManager extends ActionManager {
-
-  constructor(board: Board, scene?: Nullable<Scene> | undefined) {
-    super(scene);
-    this.registerAction(
-      new ExecuteCodeAction({
-        trigger: ActionManager.OnPickTrigger,
-      },
-        (event) => {
-          board.selectedPawn?.place(event.source);
-          board.deselectPawn();
-        },
-        new PredicateCondition(this, () => { return board.selectedPawn != undefined })
-      )
-    )
   }
 }

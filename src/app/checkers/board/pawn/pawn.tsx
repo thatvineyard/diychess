@@ -12,7 +12,8 @@ export class Pawn {
 
   private mesh: Mesh;
   private ghost: Mesh;
-  private coordinate: Vector2;
+  private highlighedGhost: Mesh;
+  public coordinate: Vector2;
   private state: State;
   private shakeAnimation: Animation;
   private liftAnimation: Animation;
@@ -20,39 +21,68 @@ export class Pawn {
   private pickupSound: Sound;
   private scene: Scene;
   private board: Board;
-  public availableMoves: Vector2[] = [];
-  private availableMoveInstances: InstancedMesh[] = [];
+  public availableMoves: Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }> = new Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }>();
+  private hightlightedMove?: Vector2;
+  private isWhite: boolean;
 
   public calcAvailableMoves() {
-    this.availableMoves = [];
+    this.availableMoves = new Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }>();
     let distance = 1;
     this.board.foreachSquare((position) => {
       let difference = position.subtract(this.coordinate);
-      if(Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
-        this.availableMoves.push(position.clone());
+      if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
+        this.availableMoves.set(position.toString(), { coordinate: position.clone(), instance: undefined });
       }
     });
+    this.availableMoves.set(this.coordinate.toString(), { coordinate: this.coordinate, instance: undefined });
   }
 
   public showAvailableMoves() {
-    this.availableMoves.forEach(position => {
-      let newInstance = this.ghost.createInstance(`${this.mesh.name} move: ${position.x}:${position.y}`);
-      newInstance.isPickable = false;
-      let meshPosition = this.board.getTilePosition(position);
-      newInstance.position = new Vector3(meshPosition.x, PLACED_HEIGHT, meshPosition.y);
-      this.availableMoveInstances.push(newInstance);
+    this.availableMoves.forEach((move, _) => {
+      move.instance = this.createGhostInstance(move.coordinate);
     });
-    let newInstance = this.ghost.createInstance(`${this.mesh.name} move: reset`);
+  }
+
+  public createGhostInstance(coordinate: Vector2) {
+    let newInstance = this.ghost.createInstance(`${this.mesh.name} move: ${coordinate.x}:${coordinate.y}`);
     newInstance.isPickable = false;
-    newInstance.position = new Vector3(this.mesh.position.x, PLACED_HEIGHT, this.mesh.position.z);
-    this.availableMoveInstances.push(newInstance);
+    newInstance.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
+    return newInstance;
   }
 
   public hideAvailableMoves() {
-    this.availableMoveInstances.forEach(instance => {
-      instance.dispose();      
+    this.unhighlightAvailableMove();
+    this.availableMoves.forEach((move, coordinate) => {
+      move.instance?.dispose();
+      move.instance = undefined;
     });
-    this.availableMoveInstances = [];
+  }
+
+  public highlightSquare(coordinate: Vector2) {
+    if (this.availableMoves.has(coordinate.toString())) {
+      this.hightlightedMove = coordinate;
+
+      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
+      if (ghostMove != null) {
+        ghostMove.instance?.dispose();
+        ghostMove.instance = undefined;
+      }
+
+      this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
+      this.highlighedGhost.setEnabled(true);
+    }
+  }
+
+  public unhighlightAvailableMove() {
+    if (this.hightlightedMove != null) {
+      this.highlighedGhost.setEnabled(false);
+
+      let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
+      if (ghostMove != null) {
+        ghostMove.instance = this.createGhostInstance(ghostMove.coordinate);
+      }
+      this.hightlightedMove = undefined;
+    }
   }
 
   constructor(isWhite: boolean, board: Board, coordinate: Vector2, scene: Scene) {
@@ -63,16 +93,23 @@ export class Pawn {
     this.board = board;
     const diameter = Math.min(this.board.getTileSize().y, this.board.getTileSize().x) * MESH_SCALE;
 
+    this.isWhite = isWhite;
+
     const position = this.board.getTilePosition(this.coordinate);
 
     this.mesh = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
     this.mesh.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
     this.mesh.parent = board;
-    this.mesh.material = isWhite ? this.board.whitePawnMaterial : this.board.blackPawnMaterial;
+    this.mesh.material = this.isWhite ? this.board.whitePawnMaterial : this.board.blackPawnMaterial;
 
     this.ghost = this.mesh.clone();
-    this.ghost.material = isWhite ? this.board.whitePawnGhostMaterial : this.board.blackPawnGhostMaterial;
+    this.ghost.material = this.isWhite ? this.board.whitePawnGhostMaterial : this.board.blackPawnGhostMaterial;
     this.ghost.setEnabled(false);
+
+    this.highlighedGhost = this.ghost.clone();
+    this.highlighedGhost.material = this.isWhite ? this.board.whitePawnGhostHighlightMaterial : this.board.blackPawnGhostHighlightMaterial;
+    this.highlighedGhost.isPickable = false;
+    this.highlighedGhost.setEnabled(false);
 
     this.shakeAnimation = new Animation("pawn_shake", "rotation.z", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
     this.shakeAnimation.setKeys(
@@ -109,20 +146,11 @@ export class Pawn {
     this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false });
   }
 
-  public onLift() { }
-
-  public toggleLift(placement: Mesh) {
-    switch (this.state) {
-      case State.NOT_DEFINED:
-        break;
-      case State.LIFTED:
-        this.place(placement);
-        break;
-      case State.PLACED:
-        this.lift();
-        break;
-    }
+  private toPlacedPosition(position: Vector2) {
+    return new Vector3(position.x, PLACED_HEIGHT, position.y);
   }
+
+  public onLift() { }
 
   public lift() {
     this.onLift();
@@ -135,12 +163,16 @@ export class Pawn {
     this.state = State.LIFTED;
   }
 
-  public place(placement: Mesh) {
+  public place(coordinate: Vector2) {
     this.mesh.animations.pop();
     this.scene.stopAnimation(this.mesh);
 
+    this.coordinate = coordinate;
+
+    let position = this.toPlacedPosition(this.board.getTilePosition(this.coordinate));
+
     this.mesh.rotation = Vector3.Zero();
-    let moveVector = placement.position.subtract(this.mesh.position);
+    let moveVector = position.subtract(this.mesh.position);
     moveVector.y = 0;
     this.mesh.position = this.mesh.position.add(moveVector);
     this.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
@@ -159,7 +191,7 @@ class PawnActionManager extends ActionManager {
         trigger: ActionManager.OnPickTrigger,
       },
         (event) => {
-          pawn.toggleLift(event.source)
+          pawn.lift();
         },
         new PredicateCondition(this, () => { return board.selectedPawn == undefined })
       )

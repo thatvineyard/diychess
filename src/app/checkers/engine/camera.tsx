@@ -10,7 +10,6 @@ const DEFAULT_CAMERA_RADIUS = 25;
 const DEFAULT_CAMERA_TARGET = Vector3.Zero();
 
 export function createCamera(scene: Scene) {
-  console.log("new camera");
   const camera = new ArcRotateCamera(DEFAULT_CAMERA_NAME, DEFAULT_CAMERA_ALPHA, DEFAULT_CAMERA_BETA, DEFAULT_CAMERA_RADIUS, DEFAULT_CAMERA_TARGET, scene);
 
   camera.wheelDeltaPercentage = 0.01;
