@@ -4,19 +4,9 @@ import { resetCamera } from "./engine/camera";
 import { GameEngine } from "./engine/engine";
 import { GameGui } from "./gui/gui";
 import { Board } from "./board/board";
+import { GameManager } from "./gameManager";
 
 enum State { START = 0, PLAYER_TURN = 1, CPU_TURN = 2, PLAYER_WIN = 3, CPU_WIN = 4 }
-
-class GameMachine {
-  // General Entire Application
-  private _scene: Scene;
-  private _canvas: HTMLCanvasElement;
-  private _engine: Engine;
-
-  constructor() {
-  }
-
-}
 
 type Box = {
   position: { y: number, x: number },
@@ -34,14 +24,14 @@ const onSceneReady = (scene: Scene) => {
   // Default intensity is 1. Let's dim the light a small amount
   light.intensity = 0.7;
 
-  let board = new Board('board', scene);
+  let gameManager = new GameManager(scene);
 
-  let gameGui = new GameGui(scene);
+  let gameGui = new GameGui(gameManager, scene);
   gameGui.registerAction("button_reset_cam", () => resetCamera(scene));
   gameGui.registerAction("button_reset_game", () => {
-    board.dispose();
-    board = new Board('board', scene);
+    gameManager.reset();
   });
+
 };
 
 

@@ -5,6 +5,7 @@ import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionR
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { textSpanContainsTextSpan } from "typescript";
 import { Square } from "./square";
+import { GameManager } from "../gameManager";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -29,11 +30,17 @@ export class Board extends TransformNode {
   public originTileIsBlack = true;
   private squares: Map<string, Square> = new Map();
 
+  private gameManager: GameManager;
+
   public boardConfiguration: BoardConfiguration;
 
-  constructor(name: string, scene: Scene) {
+  constructor(name: string, boardConfiguration: BoardConfiguration, gameManager: GameManager, scene: Scene) {
     super(name, scene);
     this.scene = scene;
+
+    this.boardConfiguration = boardConfiguration;
+
+    this.gameManager = gameManager;
 
     this.whiteSquareMaterial = new StandardMaterial("White");
     this.whiteSquareMaterial.diffuseColor = Color3.FromHexString("#f0e7d3");
@@ -63,23 +70,16 @@ export class Board extends TransformNode {
     this.attackGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#ff0000");
     this.attackGhostHighlightMaterial.alpha = 0.4;
 
-    this.boardConfiguration = {
-      dimensions: new Vector2(10, 10),
-      originTileIsBlack: true,
-      meshSize: new Vector3(10, 10, 0.5),
-      borderSize: 1,
-    }
-
     this.setup();
   }
 
   public getTilePosition(tile: Vector2) {
-    var tileSize = this.getTileSize();
+    var tileSize = this.getSquareSize();
     var positionOffset = tileSize.multiply(this.boardConfiguration.dimensions).scale(-0.5).add(tileSize.scale(0.5));
     return tile.multiply(tileSize).add(positionOffset);
   }
 
-  public getTileSize() {
+  public getSquareSize() {
     const squaresMeshSize = new Vector2(this.boardConfiguration.meshSize.x, this.boardConfiguration.meshSize.y).subtract(Vector2.One().scale(this.boardConfiguration.borderSize * 2));
     return squaresMeshSize.divide(this.boardConfiguration.dimensions);
   }
@@ -94,6 +94,10 @@ export class Board extends TransformNode {
 
   private getRankName(rank: number) {
     return String.fromCharCode('A'.charCodeAt(0) + rank);
+  }
+
+  public finalizeTurn() {
+    this.gameManager.nextTurn();
   }
 
   public foreachSquare(callback: (square: Square) => void) {
@@ -127,15 +131,13 @@ export class Board extends TransformNode {
     this.squares = new Map();
 
     var material: StandardMaterial;
-    var position = Vector2.Zero();
-    var tileSize = this.getTileSize();
     this.foreachCoordinate((coordinate) => {
       if (coordinate.x % 2 === coordinate.y % 2) {
         material = this.whiteSquareMaterial;
       } else {
         material = this.blackSquareMaterial;
       }
-      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), tileSize, material, this, this.scene));
+      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.scene));
     })
   }
 
@@ -154,14 +156,14 @@ export class Board extends TransformNode {
           }
           
           if (placeWhite) {
-            let pawn = new Pawn(true, this, square, this.scene);
+            let pawn = new Pawn(true, this, square, this.gameManager, this.scene);
             pawn.onLift = () => { this.selectPawn(pawn); };
             square.placePawn(pawn);
             return;
           }
           
           if (placeBlack) {
-            let pawn = new Pawn(false, this, square, this.scene);
+            let pawn = new Pawn(false, this, square, this.gameManager, this.scene);
             pawn.onLift = () => { this.selectPawn(pawn) };
             square.placePawn(pawn);
             return;

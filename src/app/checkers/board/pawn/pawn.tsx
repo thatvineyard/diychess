@@ -4,6 +4,8 @@ import { FRAMES_PER_SECOND } from "../../engine/engine";
 import { Board } from "../board";
 import { Square } from "../square";
 import { Move, MoveType } from "./move";
+import { GameManager } from "../../gameManager";
+import { Player, PlayerSide } from "../../player";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
@@ -27,16 +29,18 @@ export class Pawn {
   private hightlightedMove?: Vector2;
   private isWhite: boolean;
   private currentSquare: Square;
+  private gameManager: GameManager;
 
-  constructor(isWhite: boolean, board: Board, square: Square, scene: Scene) {
+  constructor(isWhite: boolean, board: Board, square: Square, gameManager: GameManager, scene: Scene) {
     this.scene = scene;
 
     this.coordinate = square.coordinate;
 
     this.currentSquare = square;
 
+    this.gameManager = gameManager;
     this.board = board;
-    const diameter = Math.min(this.board.getTileSize().y, this.board.getTileSize().x) * MESH_SCALE;
+    const diameter = Math.min(this.board.getSquareSize().y, this.board.getSquareSize().x) * MESH_SCALE;
 
     this.isWhite = isWhite;
 
@@ -84,11 +88,19 @@ export class Pawn {
     placeEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.placeAnimation.setEasingFunction(placeEase);
 
-    this.mesh.actionManager = new PawnActionManager(this, this.board, scene);
+    this.mesh.actionManager = new PawnActionManager(this, this.board, this.gameManager, scene);
 
     this.state = State.PLACED;
 
     this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false });
+  }
+
+  public canBePlayedBy(player: Player) {
+    if(this.isWhite) {
+      return player.playerSide == PlayerSide.WHITE;
+    } else {
+      return player.playerSide == PlayerSide.BLACK;
+    }
   }
 
   public calcAvailableMoves() {
@@ -210,7 +222,7 @@ export class Pawn {
 
 class PawnActionManager extends ActionManager {
 
-  constructor(pawn: Pawn, board: Board, scene?: Nullable<Scene> | undefined) {
+  constructor(pawn: Pawn, board: Board, gameManager: GameManager, scene?: Nullable<Scene> | undefined) {
     super(scene);
     this.registerAction(
       new ExecuteCodeAction({
@@ -219,7 +231,7 @@ class PawnActionManager extends ActionManager {
         (event) => {
           pawn.lift();
         },
-        new PredicateCondition(this, () => { return board.selectedPawn == undefined })
+        new PredicateCondition(this, () => { return pawn.canBePlayedBy(gameManager.getCurrentPlayer()) && board.selectedPawn == undefined })
       )
     )
   }

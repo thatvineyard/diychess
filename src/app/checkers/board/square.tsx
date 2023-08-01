@@ -1,6 +1,7 @@
 import { ActionManager, ExecuteCodeAction, Mesh, MeshBuilder, Nullable, PredicateCondition, Scene, StandardMaterial, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { Board } from "./board";
 import { Pawn } from "./pawn/pawn";
+import { GameManager } from "../gameManager";
 
 
 export class Square extends TransformNode {
@@ -10,12 +11,15 @@ export class Square extends TransformNode {
   private board: Board;
   private scene: Scene;
   private pawn?: Pawn;
+  private gameManager: GameManager;
 
-  constructor(name: string, coordinate: Vector2, size: Vector2, material: StandardMaterial, board: Board, scene: Scene) {
+  constructor(name: string, coordinate: Vector2, size: Vector2, material: StandardMaterial, board: Board, gameManager: GameManager, scene: Scene) {
     super(name, scene);
     this.scene = scene;
 
+    this.parent = board;
     this.board = board;
+    this.gameManager = gameManager;
 
     this.coordinate = coordinate;
 
@@ -23,7 +27,7 @@ export class Square extends TransformNode {
 
     this.mesh = this.createTile(name, position, size, material, this.scene);
     this.mesh.parent = this;
-    this.mesh.actionManager = new SquareActionManager(this.board, this.scene);
+    this.mesh.actionManager = new SquareActionManager(this.board, this.gameManager, this.scene);
   }
 
   private createTile(name: string, position: Vector2, size: Vector2, material: StandardMaterial, scene: Scene): Mesh {
@@ -50,7 +54,7 @@ export class Square extends TransformNode {
 
 class SquareActionManager extends ActionManager {
 
-  constructor(board: Board, scene?: Nullable<Scene> | undefined) {
+  constructor(board: Board, gameManager: GameManager, scene?: Nullable<Scene> | undefined) {
     super(scene);
     this.registerAction(
       new ExecuteCodeAction({
@@ -62,6 +66,7 @@ class SquareActionManager extends ActionManager {
             if (board.selectedPawn?.availableMoves.has(source.parent.coordinate.toString())) {
               board.selectedPawn?.place(source.parent);
               board.deselectPawn();
+              gameManager.nextTurn();
             }
           }
         },
