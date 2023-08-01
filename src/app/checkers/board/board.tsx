@@ -26,6 +26,7 @@ export class Board extends TransformNode {
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
+  private squares: Map<string, Square>;
 
   public boardConfiguration: BoardConfiguration;
 
@@ -88,7 +89,20 @@ export class Board extends TransformNode {
     return String.fromCharCode('A'.charCodeAt(0) + rank);
   }
 
-  public foreachSquare(callback: (position: Vector2) => void) {
+  public foreachSquare(callback: (square: Square) => void) {
+    var position = Vector2.Zero();
+    for (position.x = 0; position.x < this.boardConfiguration.dimensions.x; position.x++) {
+      // position.x = 0;
+      for (position.y = 0; position.y < this.boardConfiguration.dimensions.y; position.y++) {
+        let square = this.getSquare(position);
+        if(square != null) {
+          callback(square);
+        }
+      }
+    }
+  }
+
+  public foreachCoordinate(callback: (position: Vector2) => void) {
     var position = Vector2.Zero();
     for (position.x = 0; position.x < this.boardConfiguration.dimensions.x; position.x++) {
       // position.x = 0;
@@ -98,48 +112,55 @@ export class Board extends TransformNode {
     }
   }
 
+  public getSquare(coordinate: Vector2) {
+    return this.squares.get(coordinate.toString());
+  }
+
   private createSquares() {
+    this.squares = new Map();
+
     var material: StandardMaterial;
     var position = Vector2.Zero();
     var tileSize = this.getTileSize();
-    this.foreachSquare((coordinate) => {
+    this.foreachCoordinate((coordinate) => {
       if (coordinate.x % 2 === coordinate.y % 2) {
         material = this.whiteSquareMaterial;
       } else {
         material = this.blackSquareMaterial;
       }
-      new Square(this.getTileName(coordinate), coordinate.clone(), tileSize, material, this, this.scene);
+      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), tileSize, material, this, this.scene));
     })
   }
 
   private createPawns(placeWhiteRules: SquareSelectionRule[], placeBlackRules: SquareSelectionRule[]) {
-    for (let row = 0; row < this.boardConfiguration.dimensions.x; row++) {
-      for (let col = 0; col < this.boardConfiguration.dimensions.y; col++) {
-        const placeWhite = (placeWhiteRules.length !== 0) && placeWhiteRules.reduce((previousValue: boolean,
-          selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(new Vector2(row, col)) },
-          true);
+    this.foreachSquare((square: Square) => {
+
+      const placeWhite = (placeWhiteRules.length !== 0) && placeWhiteRules.reduce((previousValue: boolean,
+        selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(square.coordinate) },
+        true);
         const placeBlack = (placeBlackRules.length !== 0) && placeBlackRules.reduce((previousValue: boolean,
-          selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(new Vector2(row, col)) },
+          selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(square.coordinate) },
           true);
-        if (placeWhite && placeBlack) {
-          throw new GameRuleError("Trying to place white and black on same square");
-          continue;
-        }
-
-        if (placeWhite) {
-          let pawn = new Pawn(true, this, new Vector2(row, col), this.scene);
-          pawn.onLift = () => { this.selectPawn(pawn); };
-          continue;
-        }
-
-        if (placeBlack) {
-          let pawn = new Pawn(false, this, new Vector2(row, col), this.scene);
-          pawn.onLift = () => { this.selectPawn(pawn) };
-          continue;
-        }
-      }
+          if (placeWhite && placeBlack) {
+            throw new GameRuleError("Trying to place white and black on same square");
+            return;
+          }
+          
+          if (placeWhite) {
+            let pawn = new Pawn(true, this, square, this.scene);
+            pawn.onLift = () => { this.selectPawn(pawn); };
+            square.placePawn(pawn);
+            return;
+          }
+          
+          if (placeBlack) {
+            let pawn = new Pawn(false, this, square, this.scene);
+            pawn.onLift = () => { this.selectPawn(pawn) };
+            square.placePawn(pawn);
+            return;
+          }
+      })
     }
-  }
 
   createLabels() {
     const meshSize = new Vector2(this.boardConfiguration.meshSize.x, this.boardConfiguration.meshSize.y);

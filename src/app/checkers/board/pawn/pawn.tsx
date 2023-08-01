@@ -2,6 +2,7 @@ import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunctio
 import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
 import { FRAMES_PER_SECOND } from "../../engine/engine";
 import { Board } from "../board";
+import { Square } from "../square";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
@@ -21,25 +22,29 @@ export class Pawn {
   private pickupSound: Sound;
   private scene: Scene;
   private board: Board;
-  public availableMoves: Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }> = new Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }>();
+  public availableMoves: Map<string, { square: Square, instance: InstancedMesh | undefined }> = new Map();
   private hightlightedMove?: Vector2;
   private isWhite: boolean;
+  private currentSquare: Square;
 
   public calcAvailableMoves() {
-    this.availableMoves = new Map<string, { coordinate: Vector2, instance: InstancedMesh | undefined }>();
+    this.availableMoves = new Map();
     let distance = 1;
-    this.board.foreachSquare((position) => {
-      let difference = position.subtract(this.coordinate);
+    this.board.foreachSquare((square: Square) => {
+      if(square.hasPawn()) {
+        return false;
+      }
+      let difference = square.coordinate.subtract(this.coordinate);
       if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
-        this.availableMoves.set(position.toString(), { coordinate: position.clone(), instance: undefined });
+        this.availableMoves.set(square.coordinate.toString(), { square: square, instance: undefined });
       }
     });
-    this.availableMoves.set(this.coordinate.toString(), { coordinate: this.coordinate, instance: undefined });
+    this.availableMoves.set(this.coordinate.toString(), { square: this.currentSquare, instance: undefined });
   }
 
   public showAvailableMoves() {
     this.availableMoves.forEach((move, _) => {
-      move.instance = this.createGhostInstance(move.coordinate);
+      move.instance = this.createGhostInstance(move.square.coordinate);
     });
   }
 
@@ -58,9 +63,9 @@ export class Pawn {
     });
   }
 
-  public highlightSquare(coordinate: Vector2) {
-    if (this.availableMoves.has(coordinate.toString())) {
-      this.hightlightedMove = coordinate;
+  public highlightSquare(square: Square) {
+    if (this.availableMoves.has(square.coordinate.toString())) {
+      this.hightlightedMove = square.coordinate;
 
       let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
       if (ghostMove != null) {
@@ -68,7 +73,7 @@ export class Pawn {
         ghostMove.instance = undefined;
       }
 
-      this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
+      this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(square.coordinate));
       this.highlighedGhost.setEnabled(true);
     }
   }
@@ -79,16 +84,18 @@ export class Pawn {
 
       let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
       if (ghostMove != null) {
-        ghostMove.instance = this.createGhostInstance(ghostMove.coordinate);
+        ghostMove.instance = this.createGhostInstance(ghostMove.square.coordinate);
       }
       this.hightlightedMove = undefined;
     }
   }
 
-  constructor(isWhite: boolean, board: Board, coordinate: Vector2, scene: Scene) {
+  constructor(isWhite: boolean, board: Board, square: Square, scene: Scene) {
     this.scene = scene;
 
-    this.coordinate = coordinate;
+    this.coordinate = square.coordinate;
+
+    this.currentSquare = square;
 
     this.board = board;
     const diameter = Math.min(this.board.getTileSize().y, this.board.getTileSize().x) * MESH_SCALE;
@@ -163,11 +170,15 @@ export class Pawn {
     this.state = State.LIFTED;
   }
 
-  public place(coordinate: Vector2) {
+  public place(square: Square) {
     this.mesh.animations.pop();
     this.scene.stopAnimation(this.mesh);
 
-    this.coordinate = coordinate;
+    this.coordinate = square.coordinate;
+    
+    this.currentSquare?.removePawn();
+    square.placePawn(this);
+    this.currentSquare = square;
 
     let position = this.toPlacedPosition(this.board.getTilePosition(this.coordinate));
 

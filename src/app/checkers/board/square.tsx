@@ -1,5 +1,6 @@
 import { ActionManager, ExecuteCodeAction, Mesh, MeshBuilder, Nullable, PredicateCondition, Scene, StandardMaterial, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { Board } from "./board";
+import { Pawn } from "./pawn/pawn";
 
 
 export class Square extends TransformNode {
@@ -8,6 +9,7 @@ export class Square extends TransformNode {
   public coordinate: Vector2;
   private board: Board;
   private scene: Scene;
+  private pawn?: Pawn;
 
   constructor(name: string, coordinate: Vector2, size: Vector2, material: StandardMaterial, board: Board, scene: Scene) {
     super(name, scene);
@@ -32,6 +34,18 @@ export class Square extends TransformNode {
     return mesh;
   }
 
+  public placePawn(pawn: Pawn) {
+    this.pawn = pawn;
+  }
+  
+  public removePawn() {
+    this.pawn = undefined;
+  }
+
+  public hasPawn() {
+    return this.pawn != undefined;
+  }
+
 }
 
 class SquareActionManager extends ActionManager {
@@ -46,7 +60,7 @@ class SquareActionManager extends ActionManager {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
             if (board.selectedPawn?.availableMoves.has(source.parent.coordinate.toString())) {
-              board.selectedPawn?.place(source.parent.coordinate);
+              board.selectedPawn?.place(source.parent);
               board.deselectPawn();
             }
           }
@@ -61,7 +75,7 @@ class SquareActionManager extends ActionManager {
         (event) => {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
-            board.selectedPawn?.highlightSquare(source.parent.coordinate);
+            board.selectedPawn?.highlightSquare(source.parent);
           }
         },
         new PredicateCondition(this, () => { return board.selectedPawn != undefined })
