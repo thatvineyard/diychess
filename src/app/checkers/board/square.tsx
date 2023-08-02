@@ -65,7 +65,6 @@ class SquareActionManager extends ActionManager {
           if (source instanceof Mesh && source.parent instanceof Square) {
             if (board.selectedPawn?.availableMoves.has(source.parent.coordinate.toString())) {
               board.selectedPawn?.place(source.parent);
-              board.deselectPawn();
               gameManager.nextTurn();
             }
           }

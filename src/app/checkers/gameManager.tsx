@@ -1,6 +1,6 @@
 import { Scene, Vector2, Vector3 } from "@babylonjs/core";
 import { Board } from "./board/board";
-import { Player, PlayerController, PlayerSide } from "./player";
+import { CpuPlayer, Player, PlayerController, PlayerSide } from "./player";
 
 export enum TurnType {
   WHITE_TURN,
@@ -9,8 +9,8 @@ export enum TurnType {
 
 export class GameManager {
 
-  private whitePlayer: Player;
-  private blackPlayer: Player;
+  public whitePlayer: Player;
+  public blackPlayer: Player;
 
   private turn: number;
   private turnType: TurnType;
@@ -19,7 +19,7 @@ export class GameManager {
 
   private scene: Scene;
 
-  public onNextTurn: () => void = () => {};
+  public onNextTurn: () => void = () => { };
 
   private boardConfiguration = {
     dimensions: new Vector2(10, 10),
@@ -30,8 +30,8 @@ export class GameManager {
 
   constructor(scene: Scene) {
     this.scene = scene;
-    this.whitePlayer = new Player("white", PlayerSide.WHITE, PlayerController.PLAYER);
-    this.blackPlayer = new Player("black", PlayerSide.BLACK, PlayerController.PLAYER);
+    this.whitePlayer = new Player("white", PlayerSide.WHITE);
+    this.blackPlayer = new CpuPlayer("black", PlayerSide.BLACK);
 
     this.turn = 0;
 
@@ -44,13 +44,24 @@ export class GameManager {
     this.turn++;
     this.turnType = this.getNextTurnType(this.turnType);
     this.onNextTurn();
+    this.startTurn();
+  }
+
+  public startTurn() {
+    let currentPlayer = this.getCurrentPlayer()
+    if (currentPlayer instanceof CpuPlayer) {
+      currentPlayer.cpu.takeTurn(() => {
+        console.log("WLKDAMLKDWMA");
+        this.nextTurn();
+      },this.board);
+    }
   }
 
   public getCurrentPlayer() {
     switch (this.turnType) {
       case TurnType.WHITE_TURN:
         return this.whitePlayer;
-        case TurnType.BLACK_TURN:
+      case TurnType.BLACK_TURN:
         return this.blackPlayer;
     }
   }

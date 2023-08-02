@@ -32,6 +32,8 @@ const onSceneReady = (scene: Scene) => {
     gameManager.reset();
   });
 
+  gameManager.startTurn();
+
 };
 
 

@@ -6,6 +6,7 @@ import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { textSpanContainsTextSpan } from "typescript";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
+import { Player } from "../player";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -25,6 +26,7 @@ export class Board extends TransformNode {
   public moveGhostHighlightMaterial: StandardMaterial;
   public resetGhostHighlightMaterial: StandardMaterial;
   public attackGhostHighlightMaterial: StandardMaterial;
+  private pawns: Map<string, Pawn[]> = new Map();
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
@@ -57,15 +59,15 @@ export class Board extends TransformNode {
     this.blackPawnMaterial.diffuseColor = Color3.FromHexString("#503b3b");
     this.blackPawnGhostMaterial = this.blackPawnMaterial.clone("BlackGhost");
     this.blackPawnGhostMaterial.alpha = 0.2;
-    
+
     this.moveGhostHighlightMaterial = new StandardMaterial("moveGhostHighlight")
     this.moveGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
     this.moveGhostHighlightMaterial.alpha = 0.4;
-    
+
     this.resetGhostHighlightMaterial = new StandardMaterial("resetGhostHighlight")
     this.resetGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#0000ff");
     this.resetGhostHighlightMaterial.alpha = 0.4;
-    
+
     this.attackGhostHighlightMaterial = new StandardMaterial("attackGhostHighlight")
     this.attackGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#ff0000");
     this.attackGhostHighlightMaterial.alpha = 0.4;
@@ -106,7 +108,7 @@ export class Board extends TransformNode {
       // position.x = 0;
       for (position.y = 0; position.y < this.boardConfiguration.dimensions.y; position.y++) {
         let square = this.getSquare(position);
-        if(square != null) {
+        if (square != null) {
           callback(square);
         }
       }
@@ -121,6 +123,17 @@ export class Board extends TransformNode {
         callback(position);
       }
     }
+  }
+
+  public foreachPawn(callback: (pawn: Pawn) => void, player?: Player) {
+    if(player == null) {
+      this.pawns.forEach((value) => {
+        value.forEach(callback);
+      })
+      return
+    }
+    
+    this.pawns.get(player.name)?.forEach(callback);
   }
 
   public getSquare(coordinate: Vector2) {
@@ -141,35 +154,42 @@ export class Board extends TransformNode {
     })
   }
 
-  private createPawns(placeWhiteRules: SquareSelectionRule[], placeBlackRules: SquareSelectionRule[]) {
+  private createPawns(setUpWhiteRules: SquareSelectionRule[], setUpBlackRules: SquareSelectionRule[]) {
+    this.pawns = new Map();
+    this.pawns.set(this.gameManager.whitePlayer.name, []);
+    this.pawns.set(this.gameManager.blackPlayer.name, []);
+
     this.foreachSquare((square: Square) => {
 
-      const placeWhite = (placeWhiteRules.length !== 0) && placeWhiteRules.reduce((previousValue: boolean,
+      const setUpWhite = (setUpWhiteRules.length !== 0) && setUpWhiteRules.reduce((previousValue: boolean,
         selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(square.coordinate) },
         true);
-        const placeBlack = (placeBlackRules.length !== 0) && placeBlackRules.reduce((previousValue: boolean,
-          selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(square.coordinate) },
-          true);
-          if (placeWhite && placeBlack) {
-            throw new GameRuleError("Trying to place white and black on same square");
-            return;
-          }
-          
-          if (placeWhite) {
-            let pawn = new Pawn(true, this, square, this.gameManager, this.scene);
-            pawn.onLift = () => { this.selectPawn(pawn); };
-            square.placePawn(pawn);
-            return;
-          }
-          
-          if (placeBlack) {
-            let pawn = new Pawn(false, this, square, this.gameManager, this.scene);
-            pawn.onLift = () => { this.selectPawn(pawn) };
-            square.placePawn(pawn);
-            return;
-          }
-      })
-    }
+      const setUpBlack = (setUpBlackRules.length !== 0) && setUpBlackRules.reduce((previousValue: boolean,
+        selectionRule: SquareSelectionRule) => { return previousValue && selectionRule.select(square.coordinate) },
+        true);
+
+      if (setUpWhite && setUpBlack) {
+        throw new GameRuleError("Trying to place white and black on same square");
+        return;
+      }
+
+      if (setUpWhite) {
+        let pawn = new Pawn(true, this, square, this.gameManager, this.scene);
+        pawn.onLift = () => { this.selectPawn(pawn); };
+        square.placePawn(pawn);
+        this.pawns.get(this.gameManager.whitePlayer.name)?.push(pawn);
+        return;
+      }
+
+      if (setUpBlack) {
+        let pawn = new Pawn(false, this, square, this.gameManager, this.scene);
+        pawn.onLift = () => { this.selectPawn(pawn) };
+        square.placePawn(pawn);
+        this.pawns.get(this.gameManager.blackPlayer.name)?.push(pawn);
+        return;
+      }
+    })
+  }
 
   createLabels() {
     const meshSize = new Vector2(this.boardConfiguration.meshSize.x, this.boardConfiguration.meshSize.y);

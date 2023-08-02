@@ -186,11 +186,11 @@ export class Pawn {
 
   public onLift() { }
 
-  public lift() {
+  public lift(onLiftAnimationEnd?: () => void) {
     this.onLift();
     this.mesh.animations.push(this.liftAnimation);
     this.pickupSound.play();
-    this.scene.beginDirectAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false);
+    this.scene.beginDirectAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false, 1, onLiftAnimationEnd);
     this.scene.beginDirectAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
     // this.scene.beginAnimation(this.pawn, 0, 20, true);
     // this.pawn.animations.push(this.shakeAnimation);
@@ -215,6 +215,7 @@ export class Pawn {
     this.mesh.position = this.mesh.position.add(moveVector);
     this.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
     this.state = State.PLACED;
+    this.board.deselectPawn();
   }
 
 }
