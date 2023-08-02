@@ -92,7 +92,7 @@ export class Pawn {
 
     this.state = State.PLACED;
 
-    this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false });
+    this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false, volume: 0.3 });
   }
 
   public canBePlayedBy(player: Player) {

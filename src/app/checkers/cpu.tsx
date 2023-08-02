@@ -42,7 +42,7 @@ export class Cpu {
       
       setTimeout(() => {
       onEndTurn();
-      }, 500);
-    }, 500);
+      }, 300);
+    }, 300);
   }
 }
