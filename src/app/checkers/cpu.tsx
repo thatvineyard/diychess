@@ -1,4 +1,5 @@
 import { Board } from "./board/board";
+import { MoveType } from "./board/pawn/move";
 import { Pawn } from "./board/pawn/pawn";
 import { GameRuleError } from "./game";
 import { Player } from "./player";
@@ -14,6 +15,7 @@ export class Cpu {
   }
 
   public takeTurn(onEndTurn: () => void, board: Board) {
+    this.pawnWithMostMoves = undefined;
     board.foreachPawn((pawn: Pawn) => {
       if (pawn.canBePlayedBy(this.player)) {
         pawn.calcAvailableMoves();
@@ -27,7 +29,7 @@ export class Cpu {
         }
 
       }
-    });
+    }, this.player);
 
     if (this.pawnWithMostMoves == null) {
       throw new GameRuleError(`${this.player.name} had no useable pawns`);
@@ -36,9 +38,12 @@ export class Cpu {
     this.pawnWithMostMoves.lift();
 
     setTimeout(() => {
-      const selectMove = Math.floor(Math.random() * this.pawnWithMostMoves.availableMoves.size);
-      let move = Array.from(this.pawnWithMostMoves.availableMoves)[selectMove][1].move;
-      this.pawnWithMostMoves.place(move.square);
+      const selectMove = Math.floor(Math.random() * this.pawnWithMostMoves!.availableMoves.size);
+      let move = Array.from(this.pawnWithMostMoves!.availableMoves)[selectMove][1].move;
+      if(move.moveType == MoveType.ATTACK) {
+        board.capturePawn(move.square);
+      }
+      this.pawnWithMostMoves!.place(move.square);
       
       setTimeout(() => {
       onEndTurn();

@@ -6,6 +6,7 @@ import { Square } from "../square";
 import { Move, MoveType } from "./move";
 import { GameManager } from "../../gameManager";
 import { Player, PlayerSide } from "../../player";
+import { PawnMaterialGroup } from "../../engine/materialManager";
 
 const LIFT_HEIGHT = 2;
 const PLACED_HEIGHT = 0.05;
@@ -30,6 +31,7 @@ export class Pawn {
   private isWhite: boolean;
   private currentSquare: Square;
   private gameManager: GameManager;
+  private materialGroup: PawnMaterialGroup;
 
   constructor(isWhite: boolean, board: Board, square: Square, gameManager: GameManager, scene: Scene) {
     this.scene = scene;
@@ -43,20 +45,20 @@ export class Pawn {
     const diameter = Math.min(this.board.getSquareSize().y, this.board.getSquareSize().x) * MESH_SCALE;
 
     this.isWhite = isWhite;
+    this.materialGroup = this.isWhite ? this.board.materialManager.whitePawnMaterialGroup : this.board.materialManager.blackPawnMaterialGroup;
 
     const position = this.board.getTilePosition(this.coordinate);
 
     this.mesh = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
     this.mesh.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
     this.mesh.parent = board;
-    this.mesh.material = this.isWhite ? this.board.whitePawnMaterial : this.board.blackPawnMaterial;
+    this.mesh.material = this.materialGroup.base;
 
     this.ghost = this.mesh.clone();
-    this.ghost.material = this.isWhite ? this.board.whitePawnGhostMaterial : this.board.blackPawnGhostMaterial;
+    this.ghost.material = this.materialGroup.ghost;
     this.ghost.setEnabled(false);
 
     this.highlighedGhost = this.ghost.clone();
-    this.highlighedGhost.material = this.board.moveGhostHighlightMaterial;
     this.highlighedGhost.isPickable = false;
     this.highlighedGhost.setEnabled(false);
 
@@ -96,7 +98,7 @@ export class Pawn {
   }
 
   public canBePlayedBy(player: Player) {
-    if(this.isWhite) {
+    if (this.isWhite) {
       return player.playerSide == PlayerSide.WHITE;
     } else {
       return player.playerSide == PlayerSide.BLACK;
@@ -107,14 +109,21 @@ export class Pawn {
     this.availableMoves = new Map();
     let distance = 1;
     this.board.foreachSquare((square: Square) => {
-      if (square.hasPawn()) {
-        return false;
-      }
       let difference = square.coordinate.subtract(this.coordinate);
       if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
+        if (square.hasPawn()) {
+          if (square.getPawn()!.canBePlayedBy(this.gameManager.getCurrentPlayer())) {
+            return false;
+          } else {
+            this.availableMoves.set(square.coordinate.toString(), { move: new Move(square, MoveType.ATTACK), instance: undefined });
+            return;
+          }
+        }
         this.availableMoves.set(square.coordinate.toString(), { move: new Move(square, MoveType.MOVE), instance: undefined });
+        return;
       }
     });
+
     this.availableMoves.set(this.coordinate.toString(), { move: new Move(this.currentSquare, MoveType.RESET), instance: undefined });
   }
 
@@ -159,13 +168,29 @@ export class Pawn {
   private getHighlightMaterial(moveType: MoveType) {
     switch (moveType) {
       case MoveType.MOVE:
-        return this.board.moveGhostHighlightMaterial;
+        return this.materialGroup.moveGhostHighlight;
       case MoveType.ATTACK:
-        return this.board.attackGhostHighlightMaterial;
+        return this.materialGroup.attackGhostHighlight;
       case MoveType.RESET:
-        return this.board.resetGhostHighlightMaterial;
+        return this.materialGroup.resetGhostHighlight;
     };
 
+  }
+
+  public getOwningPlayer() {
+    return this.isWhite ? this.gameManager.whitePlayer : this.gameManager.blackPlayer;
+  }
+  
+  public makePickable() {
+    this.mesh.isPickable = true;
+  }
+
+  public makeUnpickable() {
+    this.mesh.isPickable = false;
+  }
+
+  public onCapture() {
+    this.mesh.dispose();
   }
 
   public unhighlightAvailableMove() {

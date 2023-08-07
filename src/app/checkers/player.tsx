@@ -10,11 +10,13 @@ export enum PlayerController {
   CPU
 }
 
+export type PlayerId = string; 
+
 export class Player {
-  name: string;
+  name: PlayerId;
   playerSide: PlayerSide;
 
-  constructor(name: string, playerSide: PlayerSide) {
+  constructor(name: PlayerId, playerSide: PlayerSide) {
     this.name = name;
     this.playerSide = playerSide; 
   }
@@ -24,7 +26,7 @@ export class Player {
 export class CpuPlayer extends Player {
   cpu: Cpu;
 
-  constructor(name: string, playerSide: PlayerSide) {
+  constructor(name: PlayerId, playerSide: PlayerSide) {
     super(name, playerSide);
     this.cpu = new Cpu(this);
   }

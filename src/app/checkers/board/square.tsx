@@ -2,6 +2,8 @@ import { ActionManager, ExecuteCodeAction, Mesh, MeshBuilder, Nullable, Predicat
 import { Board } from "./board";
 import { Pawn } from "./pawn/pawn";
 import { GameManager } from "../gameManager";
+import { shadowMapVertexDeclaration } from "@babylonjs/core/Shaders/ShadersInclude/shadowMapVertexDeclaration";
+import { MoveType } from "./pawn/move";
 
 
 export class Square extends TransformNode {
@@ -49,6 +51,10 @@ export class Square extends TransformNode {
   public hasPawn() {
     return this.pawn != undefined;
   }
+  
+  public getPawn() {
+    return this.pawn;
+  }
 
 }
 
@@ -63,7 +69,11 @@ class SquareActionManager extends ActionManager {
         (event) => {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
-            if (board.selectedPawn?.availableMoves.has(source.parent.coordinate.toString())) {
+            let move = board.selectedPawn?.availableMoves.get(source.parent.coordinate.toString());
+            if (move != null) {
+              if(move.move.moveType == MoveType.ATTACK) {
+                board.capturePawn(source.parent);
+              }
               board.selectedPawn?.place(source.parent);
               gameManager.nextTurn();
             }

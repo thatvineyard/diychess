@@ -22,7 +22,7 @@ export class GameManager {
   public onNextTurn: () => void = () => { };
 
   private boardConfiguration = {
-    dimensions: new Vector2(10, 10),
+    dimensions: new Vector2(5, 5),
     originTileIsBlack: true,
     meshSize: new Vector3(10, 10, 0.5),
     borderSize: 1,
@@ -30,7 +30,7 @@ export class GameManager {
 
   constructor(scene: Scene) {
     this.scene = scene;
-    this.whitePlayer = new Player("white", PlayerSide.WHITE);
+    this.whitePlayer = new CpuPlayer("white", PlayerSide.WHITE);
     this.blackPlayer = new CpuPlayer("black", PlayerSide.BLACK);
 
     this.turn = 0;
@@ -51,7 +51,6 @@ export class GameManager {
     let currentPlayer = this.getCurrentPlayer()
     if (currentPlayer instanceof CpuPlayer) {
       currentPlayer.cpu.takeTurn(() => {
-        console.log("WLKDAMLKDWMA");
         this.nextTurn();
       },this.board);
     }

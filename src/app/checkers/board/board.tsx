@@ -6,7 +6,9 @@ import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { textSpanContainsTextSpan } from "typescript";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
-import { Player } from "../player";
+import { Player, PlayerId } from "../player";
+import { materialManager as MaterialManager } from "../engine/materialManager";
+import { MoveType } from "./pawn/move";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -17,16 +19,8 @@ type BoardConfiguration = {
 
 export class Board extends TransformNode {
 
-  public whiteSquareMaterial: StandardMaterial;
-  public whitePawnMaterial: StandardMaterial;
-  public whitePawnGhostMaterial: StandardMaterial;
-  public blackSquareMaterial: StandardMaterial;
-  public blackPawnMaterial: StandardMaterial;
-  public blackPawnGhostMaterial: StandardMaterial;
-  public moveGhostHighlightMaterial: StandardMaterial;
-  public resetGhostHighlightMaterial: StandardMaterial;
-  public attackGhostHighlightMaterial: StandardMaterial;
-  private pawns: Map<string, Pawn[]> = new Map();
+  public materialManager: MaterialManager;
+  private pawns: Map<PlayerId, Pawn[]> = new Map();
   public selectedPawn?: Pawn;
   private scene!: Scene;
   public originTileIsBlack = true;
@@ -44,33 +38,7 @@ export class Board extends TransformNode {
 
     this.gameManager = gameManager;
 
-    this.whiteSquareMaterial = new StandardMaterial("White");
-    this.whiteSquareMaterial.diffuseColor = Color3.FromHexString("#f0e7d3");
-
-    this.blackSquareMaterial = new StandardMaterial("Black");
-    this.blackSquareMaterial.diffuseColor = Color3.FromHexString("#17171d");
-
-    this.whitePawnMaterial = new StandardMaterial("White");
-    this.whitePawnMaterial.diffuseColor = Color3.FromHexString("#e4b293");
-    this.whitePawnGhostMaterial = this.whitePawnMaterial.clone("WhiteGhost");
-    this.whitePawnGhostMaterial.alpha = 0.2;
-
-    this.blackPawnMaterial = new StandardMaterial("Black");
-    this.blackPawnMaterial.diffuseColor = Color3.FromHexString("#503b3b");
-    this.blackPawnGhostMaterial = this.blackPawnMaterial.clone("BlackGhost");
-    this.blackPawnGhostMaterial.alpha = 0.2;
-
-    this.moveGhostHighlightMaterial = new StandardMaterial("moveGhostHighlight")
-    this.moveGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#00ff00");
-    this.moveGhostHighlightMaterial.alpha = 0.4;
-
-    this.resetGhostHighlightMaterial = new StandardMaterial("resetGhostHighlight")
-    this.resetGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#0000ff");
-    this.resetGhostHighlightMaterial.alpha = 0.4;
-
-    this.attackGhostHighlightMaterial = new StandardMaterial("attackGhostHighlight")
-    this.attackGhostHighlightMaterial.emissiveColor = Color3.FromHexString("#ff0000");
-    this.attackGhostHighlightMaterial.alpha = 0.4;
+    this.materialManager = new MaterialManager();
 
     this.setup();
   }
@@ -136,6 +104,22 @@ export class Board extends TransformNode {
     this.pawns.get(player.name)?.forEach(callback);
   }
 
+  public capturePawn(square: Square) {
+    let pawn = square.getPawn();
+    if(pawn == null) {
+      console.warn("tried to capture an unoccupied square");
+      return;
+    }
+    
+    let owningPlayer = pawn.getOwningPlayer();
+    let playerPawns = this.pawns.get(owningPlayer!.name)!;
+    this.pawns.set(owningPlayer!.name, playerPawns.filter((value) => value.coordinate != pawn!.coordinate));
+
+    square.removePawn();
+
+    pawn.onCapture();
+  }
+
   public getSquare(coordinate: Vector2) {
     return this.squares.get(coordinate.toString());
   }
@@ -146,9 +130,9 @@ export class Board extends TransformNode {
     var material: StandardMaterial;
     this.foreachCoordinate((coordinate) => {
       if (coordinate.x % 2 === coordinate.y % 2) {
-        material = this.whiteSquareMaterial;
+        material = this.materialManager.boardMaterialGroup.whiteSquare;
       } else {
-        material = this.blackSquareMaterial;
+        material = this.materialManager.boardMaterialGroup.blackSquare;
       }
       this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.scene));
     })
@@ -269,8 +253,8 @@ export class Board extends TransformNode {
     this.createSquares();
 
     var selectWhiteSquares = new SelectWhiteSquares(this);
-    var selectTopRanksRule = new SelectTopRanks(this, 3);
-    var selectBottomRanksRule = new SelectBottomRanks(this, 3);
+    var selectTopRanksRule = new SelectTopRanks(this, 2);
+    var selectBottomRanksRule = new SelectBottomRanks(this, 2);
 
     this.createPawns([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
   }
@@ -278,11 +262,21 @@ export class Board extends TransformNode {
   public selectPawn(pawn: Pawn) {
     this.selectedPawn = pawn;
     this.selectedPawn.calcAvailableMoves();
+    this.selectedPawn?.availableMoves.forEach(({move, instance}) => {
+      if(move.moveType == MoveType.ATTACK) {
+        move.square.getPawn()?.makeUnpickable();
+      }
+    })
     this.selectedPawn.showAvailableMoves();
   }
 
   public deselectPawn() {
     this.selectedPawn?.hideAvailableMoves();
+    this.selectedPawn?.availableMoves.forEach(({move, instance}) => {
+      if(move.moveType == MoveType.ATTACK) {
+        move.square.getPawn()?.makePickable();
+      }
+    })
     this.selectedPawn = undefined;
   }
 }
