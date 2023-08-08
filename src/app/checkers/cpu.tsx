@@ -1,7 +1,7 @@
 import { Board } from "./board/board";
 import { MoveType } from "./board/pawn/move";
 import { Pawn } from "./board/pawn/pawn";
-import { GameRuleError } from "./game";
+import { GameRuleError } from "./gameEngine";
 import { Player } from "./player";
 
 export class Cpu {
@@ -33,6 +33,7 @@ export class Cpu {
 
     if (this.pawnWithMostMoves == null) {
       throw new GameRuleError(`${this.player.name} had no useable pawns`);
+      return;
     }
 
     this.pawnWithMostMoves.lift();

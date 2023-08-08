@@ -2,7 +2,7 @@
 
 import React from "react";
 import "./canvas.css";
-import Game from "./game";
+import Game from "./gameEngine";
 
 export default function CheckersPage() {
   return (

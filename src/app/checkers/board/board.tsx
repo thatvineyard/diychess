@@ -1,14 +1,13 @@
-import { StandardMaterial, Color3, Vector2, Mesh, MeshBuilder, Vector3, ActionManager, Sound, ExecuteCodeAction, Scene, Nullable, Condition, PredicateCondition, TransformNode, Axis, Tools, Space } from "@babylonjs/core";
+import { StandardMaterial, Color3, Vector2, MeshBuilder, Vector3, TransformNode, Tools, Space } from "@babylonjs/core";
 import { Pawn } from "./pawn/pawn";
-import { GameRuleError } from "../game";
+import { GameRuleError } from "../gameEngine";
 import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./squareSelectionRule";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
-import { textSpanContainsTextSpan } from "typescript";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
 import { Player, PlayerId } from "../player";
-import { materialManager as MaterialManager } from "../engine/materialManager";
 import { MoveType } from "./pawn/move";
+import { GameEngine } from "../engine/engine";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -19,10 +18,9 @@ type BoardConfiguration = {
 
 export class Board extends TransformNode {
 
-  public materialManager: MaterialManager;
   private pawns: Map<PlayerId, Pawn[]> = new Map();
   public selectedPawn?: Pawn;
-  private scene!: Scene;
+  private gameEngine: GameEngine;
   public originTileIsBlack = true;
   private squares: Map<string, Square> = new Map();
 
@@ -30,15 +28,13 @@ export class Board extends TransformNode {
 
   public boardConfiguration: BoardConfiguration;
 
-  constructor(name: string, boardConfiguration: BoardConfiguration, gameManager: GameManager, scene: Scene) {
-    super(name, scene);
-    this.scene = scene;
+  constructor(name: string, boardConfiguration: BoardConfiguration, gameManager: GameManager, gameEngine: GameEngine) {
+    super(name, gameEngine.scene);
+    this.gameEngine = gameEngine;
 
     this.boardConfiguration = boardConfiguration;
 
     this.gameManager = gameManager;
-
-    this.materialManager = new MaterialManager();
 
     this.setup();
   }
@@ -130,11 +126,11 @@ export class Board extends TransformNode {
     var material: StandardMaterial;
     this.foreachCoordinate((coordinate) => {
       if (coordinate.x % 2 === coordinate.y % 2) {
-        material = this.materialManager.boardMaterialGroup.whiteSquare;
+        material = this.gameEngine.materialManager!.boardMaterialGroup.whiteSquare;
       } else {
-        material = this.materialManager.boardMaterialGroup.blackSquare;
+        material = this.gameEngine.materialManager!.boardMaterialGroup.blackSquare;
       }
-      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.scene));
+      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.gameEngine.scene));
     })
   }
 
@@ -158,7 +154,7 @@ export class Board extends TransformNode {
       }
 
       if (setUpWhite) {
-        let pawn = new Pawn(true, this, square, this.gameManager, this.scene);
+        let pawn = new Pawn(true, this, square, this.gameManager, this.gameEngine);
         pawn.onLift = () => { this.selectPawn(pawn); };
         square.placePawn(pawn);
         this.pawns.get(this.gameManager.whitePlayer.name)?.push(pawn);
@@ -166,7 +162,7 @@ export class Board extends TransformNode {
       }
 
       if (setUpBlack) {
-        let pawn = new Pawn(false, this, square, this.gameManager, this.scene);
+        let pawn = new Pawn(false, this, square, this.gameManager, this.gameEngine);
         pawn.onLift = () => { this.selectPawn(pawn) };
         square.placePawn(pawn);
         this.pawns.get(this.gameManager.blackPlayer.name)?.push(pawn);
@@ -183,7 +179,7 @@ export class Board extends TransformNode {
     const borderOffsetProcent = borderStartProcent.add(Vector2.One().scale(50)).scale(0.5);
 
     const boardBoxMeshSize = this.boardConfiguration.meshSize
-    let boardText = MeshBuilder.CreatePlane("boardText", { width: boardBoxMeshSize.x, height: boardBoxMeshSize.y }, this.scene);
+    let boardText = MeshBuilder.CreatePlane("boardText", { width: boardBoxMeshSize.x, height: boardBoxMeshSize.y }, this.gameEngine.scene);
     boardText.parent = this;
     boardText.rotate(Vector3.Left(), Tools.ToRadians(-90));
     boardText.translate(Vector3.Up(), 0.01, Space.WORLD);
@@ -240,10 +236,10 @@ export class Board extends TransformNode {
 
   setup() {
 
-    let boardMat = new StandardMaterial("boardMat", this.scene);
+    let boardMat = new StandardMaterial("boardMat", this.gameEngine.scene);
     boardMat.diffuseColor = Color3.FromHexString("#522b22");
     const boardBoxMeshSize = this.boardConfiguration.meshSize
-    let boardBox = MeshBuilder.CreateBox("board", { width: boardBoxMeshSize.x, depth: boardBoxMeshSize.y, height: boardBoxMeshSize.z }, this.scene);
+    let boardBox = MeshBuilder.CreateBox("board", { width: boardBoxMeshSize.x, depth: boardBoxMeshSize.y, height: boardBoxMeshSize.z }, this.gameEngine.scene);
     boardBox.parent = this;
     boardBox.position = Vector3.Up().scale(-0.5 / 2);
     boardBox.material = boardMat;

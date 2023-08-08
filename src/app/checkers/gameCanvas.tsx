@@ -9,7 +9,7 @@ type SceneComponentProps = {
   id: string,
 }
 
-export default function GameCanvas({ gameEngine, id, ...rest }: SceneComponentProps) {
+export default function GameCanvas({ gameEngine: gameEngine, id, ...rest }: SceneComponentProps) {
   const reactCanvas = useRef(null);
 
   // set up basic engine and scene
@@ -18,33 +18,17 @@ export default function GameCanvas({ gameEngine, id, ...rest }: SceneComponentPr
 
     if (!canvas) return;
 
-    const engine = new Engine(canvas, gameEngine.antialias, gameEngine.engineOptions, gameEngine.adaptToDeviceRatio);
-    const scene = new Scene(engine, gameEngine.sceneOptions);
-
-    if (scene.isReady()) {
-      gameEngine.start(scene);
-    } else {
-      scene.onReadyObservable.addOnce((scene) => gameEngine.start(scene));
-    }
-
-    engine.runRenderLoop(() => {
-      gameEngine.update(scene);
-      scene.render();
-    });
-
-    const resize = () => {
-      scene.getEngine().resize();
-    };
+    gameEngine.start(canvas);
 
     if (window) {
-      window.addEventListener("resize", resize);
+      window.addEventListener("resize", gameEngine.resize);
     }
 
     return () => {
-      scene.getEngine().dispose();
+      gameEngine.scene.getEngine().dispose();
 
       if (window) {
-        window.removeEventListener("resize", resize);
+        window.removeEventListener("resize", gameEngine.resize);
       }
     };
   }, [gameEngine]);

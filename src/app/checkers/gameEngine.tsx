@@ -17,17 +17,17 @@ let box: Box;
 
 let frames = 0;
 
-const onSceneReady = (scene: Scene) => {
+const onSceneReady = (gameEngine: GameEngine) => {
   // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-  const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
+  const light = new HemisphericLight("light", new Vector3(0, 1, 0), gameEngine.scene);
 
   // Default intensity is 1. Let's dim the light a small amount
   light.intensity = 0.7;
 
-  let gameManager = new GameManager(scene);
+  let gameManager = new GameManager(gameEngine);
 
-  let gameGui = new GameGui(gameManager, scene);
-  gameGui.registerAction("button_reset_cam", () => resetCamera(scene));
+  let gameGui = new GameGui(gameManager, gameEngine.scene);
+  gameGui.registerAction("button_reset_cam", () => resetCamera(gameEngine.scene));
   gameGui.registerAction("button_reset_game", () => {
     gameManager.reset();
   });
@@ -40,7 +40,7 @@ const onSceneReady = (scene: Scene) => {
 /**
  * Will run on every frame render.  We are spinning the box on y-axis.
  */
-const onRender = (scene: Scene) => {
+const onRender = (gameEngine: GameEngine) => {
   // frames++;
 };
 

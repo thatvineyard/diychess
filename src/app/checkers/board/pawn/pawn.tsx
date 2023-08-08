@@ -1,6 +1,6 @@
 import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Material, Nullable, PredicateCondition, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
 import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
-import { FRAMES_PER_SECOND } from "../../engine/engine";
+import { FRAMES_PER_SECOND, GameEngine } from "../../engine/engine";
 import { Board } from "../board";
 import { Square } from "../square";
 import { Move, MoveType } from "./move";
@@ -8,7 +8,7 @@ import { GameManager } from "../../gameManager";
 import { Player, PlayerSide } from "../../player";
 import { PawnMaterialGroup } from "../../engine/materialManager";
 
-const LIFT_HEIGHT = 2;
+const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
 const MESH_SCALE = 0.85;
 enum State { NOT_DEFINED, LIFTED, PLACED }
@@ -24,7 +24,7 @@ export class Pawn {
   private liftAnimation: Animation;
   private placeAnimation: Animation;
   private pickupSound: Sound;
-  private scene: Scene;
+  private gameEngine: GameEngine;
   private board: Board;
   public availableMoves: Map<string, { move: Move, instance: InstancedMesh | undefined }> = new Map();
   private hightlightedMove?: Vector2;
@@ -33,8 +33,8 @@ export class Pawn {
   private gameManager: GameManager;
   private materialGroup: PawnMaterialGroup;
 
-  constructor(isWhite: boolean, board: Board, square: Square, gameManager: GameManager, scene: Scene) {
-    this.scene = scene;
+  constructor(isWhite: boolean, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
+    this.gameEngine = gameEngine;
 
     this.coordinate = square.coordinate;
 
@@ -45,11 +45,11 @@ export class Pawn {
     const diameter = Math.min(this.board.getSquareSize().y, this.board.getSquareSize().x) * MESH_SCALE;
 
     this.isWhite = isWhite;
-    this.materialGroup = this.isWhite ? this.board.materialManager.whitePawnMaterialGroup : this.board.materialManager.blackPawnMaterialGroup;
+    this.materialGroup = this.isWhite ? this.gameEngine.materialManager!.whitePawnMaterialGroup : this.gameEngine.materialManager!.blackPawnMaterialGroup;
 
     const position = this.board.getTilePosition(this.coordinate);
 
-    this.mesh = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.scene);
+    this.mesh = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.gameEngine.scene);
     this.mesh.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
     this.mesh.parent = board;
     this.mesh.material = this.materialGroup.base;
@@ -90,11 +90,11 @@ export class Pawn {
     placeEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.placeAnimation.setEasingFunction(placeEase);
 
-    this.mesh.actionManager = new PawnActionManager(this, this.board, this.gameManager, scene);
+    this.mesh.actionManager = new PawnActionManager(this, this.board, this.gameManager, this.gameEngine.scene);
 
     this.state = State.PLACED;
 
-    this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.scene, null, { loop: false, autoplay: false, volume: 0.3 });
+    this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.gameEngine.scene, null, { loop: false, autoplay: false, volume: 0.3 });
   }
 
   public canBePlayedBy(player: Player) {
@@ -215,8 +215,8 @@ export class Pawn {
     this.onLift();
     this.mesh.animations.push(this.liftAnimation);
     this.pickupSound.play();
-    this.scene.beginDirectAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false, 1, onLiftAnimationEnd);
-    this.scene.beginDirectAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
+    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false, 1, onLiftAnimationEnd);
+    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
     // this.scene.beginAnimation(this.pawn, 0, 20, true);
     // this.pawn.animations.push(this.shakeAnimation);
     this.state = State.LIFTED;
@@ -224,7 +224,7 @@ export class Pawn {
 
   public place(square: Square) {
     this.mesh.animations.pop();
-    this.scene.stopAnimation(this.mesh);
+    this.gameEngine.scene.stopAnimation(this.mesh);
 
     this.coordinate = square.coordinate;
 
@@ -238,7 +238,7 @@ export class Pawn {
     let moveVector = position.subtract(this.mesh.position);
     moveVector.y = 0;
     this.mesh.position = this.mesh.position.add(moveVector);
-    this.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
+    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
     this.state = State.PLACED;
     this.board.deselectPawn();
   }

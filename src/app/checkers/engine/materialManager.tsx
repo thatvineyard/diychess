@@ -1,5 +1,6 @@
-import { Color3, Material, StandardMaterial } from "@babylonjs/core";
+import { Color3, Material, Scene, StandardMaterial } from "@babylonjs/core";
 import { Move, MoveType } from "../board/pawn/move";
+import { GameEngine } from "./engine";
 
 const defaultHighlightColors = new Map<MoveType, Color3>([
   [MoveType.MOVE, Color3.FromHexString("#00ff00")],
@@ -21,8 +22,8 @@ export class PawnMaterialGroup {
   attackGhostHighlight: StandardMaterial;
 
 
-  constructor(name: string, baseColor: Color3, ghostTransparency = 0.2, highlightTransparency = 0.4, highlightColors: Map<MoveType, Color3> = defaultHighlightColors) {
-    this.base = new StandardMaterial(`${name}-base`);
+  constructor(name: string, baseColor: Color3, ghostTransparency = 0.2, highlightTransparency = 0.4, highlightColors: Map<MoveType, Color3> = defaultHighlightColors, scene: Scene) {
+    this.base = new StandardMaterial(`${name}-base`, scene);
     this.base.diffuseColor = baseColor;
     
     this.ghost = this.base.clone(`${name}-ghost`);
@@ -52,20 +53,29 @@ class BoardMaterialGroup {
   public whiteSquare: StandardMaterial;
   public blackSquare: StandardMaterial;
 
-  constructor() {
-    this.whiteSquare = new StandardMaterial("whiteSquare");
+  constructor(scene: Scene) {
+    this.whiteSquare = new StandardMaterial("whiteSquare", scene);
     this.whiteSquare.diffuseColor = defaultWhiteSquareColor;
     
-    this.blackSquare = new StandardMaterial("blackSquare");
+    this.blackSquare = new StandardMaterial("blackSquare", scene);
     this.blackSquare.diffuseColor = defaultBlackSquareColor;
   }
 }
 
-export class materialManager {
+export class MaterialManager {
 
-  public whitePawnMaterialGroup = new PawnMaterialGroup("white", defaultWhitePawnBaseColor);
-  public blackPawnMaterialGroup = new PawnMaterialGroup("black", defaultBlackPawnBaseColor);
+  private gameEngine: GameEngine;
 
-  public boardMaterialGroup = new BoardMaterialGroup();
+  public whitePawnMaterialGroup;
+  public blackPawnMaterialGroup;
+
+  public boardMaterialGroup;
+
+  constructor(gameEngine: GameEngine) {
+    this.gameEngine = gameEngine;
+    this.boardMaterialGroup = new BoardMaterialGroup(this.gameEngine.scene);
+    this.whitePawnMaterialGroup = new PawnMaterialGroup("white", defaultWhitePawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
+    this.blackPawnMaterialGroup = new PawnMaterialGroup("black", defaultBlackPawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
+  }
 
 }
