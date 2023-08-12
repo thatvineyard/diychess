@@ -73,7 +73,7 @@ class SquareActionManager extends ActionManager {
             let move = board.selectedPiece?.availableMoves.get(source.parent.coordinate.toString());
             if (move != null) {
               if(move.move instanceof CaptureMove) {
-                board.capturePawn(source.parent);
+                board.capturePawn(move.move.captureSquare);
               }
               board.selectedPiece?.place(source.parent);
               gameManager.nextTurn();

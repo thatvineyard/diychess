@@ -42,7 +42,7 @@ export class Cpu {
       const selectMove = Math.floor(Math.random() * this.pawnWithMostMoves!.availableMoves.size);
       let move = Array.from(this.pawnWithMostMoves!.availableMoves)[selectMove][1].move;
       if(move instanceof CaptureMove) {
-        board.capturePawn(move.target);
+        board.capturePawn(move.captureSquare);
       }
       this.pawnWithMostMoves!.place(move.target);
       
