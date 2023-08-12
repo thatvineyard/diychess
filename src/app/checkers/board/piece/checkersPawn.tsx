@@ -8,7 +8,8 @@ import { GameManager } from "../../gameManager";
 import { Player, PlayerSide } from "../../player";
 import { PieceMaterialGroup } from "../../engine/materialManager";
 import { Piece } from "./piece";
-import { SelectAround, SelectDiagonalExtents } from "../squareSelectionRule";
+import { SquareSelectionRuleSet } from "../squareSelectionRuleSet";
+import { SelectDiagonalExtents } from "../squareSelectionRule";
 
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
@@ -17,11 +18,12 @@ enum State { NOT_DEFINED, LIFTED, PLACED }
 
 export class CheckersPawn extends Piece {
 
-  private moveSelectionRule = new SelectDiagonalExtents(this.board, 1);
-  // private moveSelectionRule = new SelectAround(this.board, 1);
+  private squareSelectionRuleSet = new SquareSelectionRuleSet();
 
   constructor(owner: Player, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
     super(owner, board, square, gameManager, gameEngine);
+
+    this.squareSelectionRuleSet.addAdditiveRule(new SelectDiagonalExtents(board, 1));
   }
 
   createMesh(): Mesh {
@@ -46,7 +48,7 @@ export class CheckersPawn extends Piece {
     this.availableMoves = new Map();
     let distance = 1;
     this.board.foreachSquare((square: Square) => {
-      if(this.moveSelectionRule.select(square.coordinate, this.currentSquare.coordinate)) {
+      if(this.squareSelectionRuleSet.select(square.coordinate, this.currentSquare.coordinate)) {
         if (square.hasPawn()) {
           if (square.getPawn()!.canBePlayedBy(this.gameManager.getCurrentPlayer())) {
             return false;

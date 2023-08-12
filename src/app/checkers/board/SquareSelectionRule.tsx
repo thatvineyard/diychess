@@ -79,7 +79,7 @@ export class SelectDiagonalExtents extends SelectAround {
   }
 
   select(position: Vector2, center: Vector2): boolean {
-    let isOnCheckerboard = (position.x % 2 === position.y % 2) !== (center.x % 2 === 0);
+    let isOnCheckerboard = ((position.x + position.y) - (center.x + center.y)) % 2 === 0;
     if(!isOnCheckerboard) {
       return false 
     }
