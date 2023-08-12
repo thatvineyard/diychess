@@ -2,7 +2,7 @@ import { Scene } from "@babylonjs/core";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import * as guiTexture from "./guiTexture.json";
 import { Player } from "../player";
-import { GameManager } from "../gameManager";
+import { GameManager } from "../game/gameManager";
 
 
 export class GameGui {

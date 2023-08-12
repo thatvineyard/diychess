@@ -3,8 +3,6 @@ import { createCamera } from "./camera";
 import { DebugInfo } from "./debugInfo";
 import { MaterialManager } from "./materialManager";
 
-export const FRAMES_PER_SECOND = 60;
-
 export class GameEngine {
   public engineOptions: EngineOptions
   public sceneOptions: SceneOptions
@@ -16,6 +14,7 @@ export class GameEngine {
   public materialManager?: MaterialManager;
   public scene!: Scene;
   public babylonEngine!: Engine;
+  readonly FRAMES_PER_SECOND = 60;
 
   constructor(onRender: (gameEngine: GameEngine) => void, onSceneReady: (gameEngine: GameEngine) => void) {
     this.engineOptions = {};

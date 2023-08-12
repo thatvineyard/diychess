@@ -1,13 +1,13 @@
 import { StandardMaterial, Color3, Vector2, MeshBuilder, Vector3, TransformNode, Tools, Space } from "@babylonjs/core";
 import { CheckersPawn } from "./piece/checkersPawn";
-import { GameRuleError } from "../gameEngine";
 import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./squareSelectionRule";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
-import { Player, PlayerId } from "../player";
-import { GameEngine } from "../engine/engine";
 import { CaptureMove } from "./piece/move";
+import { GameEngine } from "../../engine/engine";
+import { Player, PlayerId } from "../player/player";
+import { GameRuleError } from "../../engine/gameEngine";
 
 type BoardConfiguration = {
   dimensions: Vector2;

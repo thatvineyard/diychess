@@ -1,16 +1,15 @@
-import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Material, Nullable, PredicateCondition, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
-import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
-import { FRAMES_PER_SECOND, GameEngine } from "../../engine/engine";
 import { Board } from "../board";
 import { Square } from "../square";
 import { CancelMove, CaptureMove, Move, MovementMove } from "./move";
 import { GameManager } from "../../gameManager";
-import { Player, PlayerSide } from "../../player";
-import { PieceMaterialGroup } from "../../engine/materialManager";
 import { Piece } from "./piece";
 import { SquareSelectionRuleSet } from "../squareSelectionRuleSet";
 import { SelectDiagonalExtents, SelectDiagonalExtentsWithCurrentPlayersPieceBetween, SelectDiagonalExtentsWithOtherThanCurrentPlayersPieceBetween, SelectDiagonalExtentsWithPieceBetween, SelectEmptySquare } from "../squareSelectionRule";
 import { checkSquaresBetweenSquaresOnDiagonals } from "../boardUtils";
+import { Player, PlayerSide } from "../../player/player";
+import { GameEngine } from "@/app/checkers/engine/engine";
+import { PieceMaterialGroup } from "@/app/checkers/engine/materialManager";
+import { Mesh, MeshBuilder, Sound } from "@babylonjs/core";
 
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
@@ -21,7 +20,7 @@ export class CheckersPawn extends Piece {
 
   private movementRuleSet = new SquareSelectionRuleSet();
   private captureRuleSet = new SquareSelectionRuleSet();
-
+  
   constructor(owner: Player, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
     super(owner, board, square, gameManager, gameEngine);
 

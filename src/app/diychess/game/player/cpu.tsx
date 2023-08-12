@@ -1,7 +1,7 @@
-import { Board } from "./board/board";
-import { CheckersPawn } from "./board/piece/checkersPawn";
-import { CaptureMove } from "./board/piece/move";
-import { GameRuleError } from "./gameEngine";
+import { GameRuleError } from "../../engine/gameEngine";
+import { Board } from "../board/board";
+import { CheckersPawn } from "../board/piece/checkersPawn";
+import { CaptureMove } from "../board/piece/move";
 import { Player } from "./player";
 
 export class Cpu {

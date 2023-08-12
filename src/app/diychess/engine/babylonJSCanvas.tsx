@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { Engine, EngineOptions, Scene, SceneOptions } from "@babylonjs/core";
-import { GameEngine } from "./engine/engine";
+import { GameEngine } from "./engine";
 
 type SceneComponentProps = {
   gameEngine: GameEngine,
   id: string,
 }
 
-export default function GameCanvas({ gameEngine: gameEngine, id, ...rest }: SceneComponentProps) {
+export default function BabylonJSCanvas({ gameEngine: gameEngine, id, ...rest }: SceneComponentProps) {
   const reactCanvas = useRef(null);
 
   // set up basic engine and scene

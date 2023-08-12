@@ -1,13 +1,12 @@
-import { Action, ActionManager, Animation, BounceEase, CircleEase, EasingFunction, ExecuteCodeAction, Material, Nullable, PredicateCondition, Scene, Sound, Space, Vector2, Vector3 } from "@babylonjs/core";
-import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
-import { FRAMES_PER_SECOND, GameEngine } from "../../engine/engine";
+import { Mesh, Sound, InstancedMesh, Vector2, CircleEase, EasingFunction, BounceEase, ActionManager, Vector3, Space, ExecuteCodeAction, PredicateCondition, Animation } from "@babylonjs/core";
+import { GameManager } from "../../gameManager";
+import { Player } from "../../player/player";
 import { Board } from "../board";
 import { Square } from "../square";
-import { CancelMove, CaptureMove, Move, MovementMove } from "./move";
-import { GameManager } from "../../gameManager";
-import { Player, PlayerSide } from "../../player";
-import { EngineAware } from "../../engine/engineAware";
-import { PieceMaterialGroup } from "../../engine/materialManager";
+import { Move, MovementMove, CaptureMove, CancelMove } from "./move";
+import { GameEngine } from "@/app/diychess/engine/engine";
+import { EngineAware } from "@/app/diychess/engine/engineAware";
+import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
 
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
@@ -57,7 +56,7 @@ export abstract class Piece extends EngineAware {
     this.highlighedGhost.isPickable = false;
     this.highlighedGhost.setEnabled(false);
 
-    this.shakeAnimation = new Animation("pawn_shake", "rotation.z", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
+    this.shakeAnimation = new Animation("pawn_shake", "rotation.z", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
     this.shakeAnimation.setKeys(
       [
         { frame: 0, value: -0.1 }, { frame: 20, value: 0.1 }
@@ -65,7 +64,7 @@ export abstract class Piece extends EngineAware {
     );
     this.shakeAnimation.setEasingFunction(new CircleEase());
 
-    this.liftAnimation = new Animation("pawn_lift", "position.y", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
+    this.liftAnimation = new Animation("pawn_lift", "position.y", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.liftAnimation.setKeys(
       [
         { frame: 0, value: PLACED_HEIGHT }, { frame: 50, value: LIFT_HEIGHT }
@@ -75,7 +74,7 @@ export abstract class Piece extends EngineAware {
     liftEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.liftAnimation.setEasingFunction(liftEase);
 
-    this.placeAnimation = new Animation("pawn_lift", "position.y", FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
+    this.placeAnimation = new Animation("pawn_lift", "position.y", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.placeAnimation.setKeys(
       [
         { frame: 0, value: LIFT_HEIGHT }, { frame: 30, value: PLACED_HEIGHT }

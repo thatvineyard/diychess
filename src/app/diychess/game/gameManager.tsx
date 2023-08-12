@@ -1,7 +1,7 @@
-import { Scene, Vector2, Vector3 } from "@babylonjs/core";
+import { Vector2, Vector3 } from "@babylonjs/core";
+import { GameEngine } from "../engine/engine";
 import { Board } from "./board/board";
-import { CpuPlayer, Player, PlayerController, PlayerSide } from "./player";
-import { GameEngine } from "./engine/engine";
+import { CpuPlayer, Player, PlayerSide } from "./player/player";
 
 export enum TurnType {
   WHITE_TURN,
@@ -23,7 +23,7 @@ export class GameManager {
   public onNextTurn: () => void = () => { };
 
   private boardConfiguration = {
-    dimensions: new Vector2(5, 5),
+    dimensions: new Vector2(8, 8),
     originTileIsBlack: true,
     meshSize: new Vector3(10, 10, 0.5),
     borderSize: 1,
@@ -31,7 +31,7 @@ export class GameManager {
 
   constructor(gameEngine: GameEngine) {
     this.gameEngine = gameEngine;
-    this.whitePlayer = new Player("white", PlayerSide.WHITE);
+    this.whitePlayer = new CpuPlayer("white", PlayerSide.WHITE);
     this.blackPlayer = new CpuPlayer("black", PlayerSide.BLACK);
 
     this.turn = 0;

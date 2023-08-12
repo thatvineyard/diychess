@@ -1,10 +1,10 @@
-import { Color3, Engine, HemisphericLight, MeshBuilder, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
-import GameCanvas from "./gameCanvas";
-import { resetCamera } from "./engine/camera";
-import { GameEngine } from "./engine/engine";
-import { GameGui } from "./gui/gui";
-import { Board } from "./board/board";
-import { GameManager } from "./gameManager";
+import { HemisphericLight, Vector3 } from "@babylonjs/core";
+import { GameManager } from "../game/gameManager";
+import { GameGui } from "../gui/gui";
+import BabylonJSCanvas from "./babylonJSCanvas";
+import { resetCamera } from "./camera";
+import { GameEngine } from "./engine";
+
 
 enum State { START = 0, PLAYER_TURN = 1, CPU_TURN = 2, PLAYER_WIN = 3, CPU_WIN = 4 }
 
@@ -44,11 +44,11 @@ const onRender = (gameEngine: GameEngine) => {
   // frames++;
 };
 
-export default function Game() {
+export default function BabylonJSRunner() {
   var gameEngine = new GameEngine(onRender, onSceneReady);
 
   return (
-    <GameCanvas gameEngine={gameEngine} id="my-canvas" />
+    <BabylonJSCanvas gameEngine={gameEngine} id="my-canvas" />
   )
 }
 
