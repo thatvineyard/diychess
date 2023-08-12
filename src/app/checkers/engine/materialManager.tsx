@@ -1,12 +1,18 @@
 import { Color3, Material, Scene, StandardMaterial } from "@babylonjs/core";
-import { Move, MoveType } from "../board/pawn/move";
+import { Move } from "../board/piece/move";
 import { GameEngine } from "./engine";
 
-const defaultHighlightColors = new Map<MoveType, Color3>([
-  [MoveType.MOVE, Color3.FromHexString("#00ff00")],
-  [MoveType.RESET, Color3.FromHexString("#0000ff")],
-  [MoveType.ATTACK, Color3.FromHexString("#ff0000")],
-]);
+type HightlightColors = {
+  movement: Color3,
+  capture: Color3,
+  cancel: Color3,
+}
+
+const defaultHighlightColors = {
+  movement: Color3.FromHexString("#00ff00"),
+  capture: Color3.FromHexString("#ff0000"),
+  cancel: Color3.FromHexString("#0000ff"),
+};
 
 const defaultWhitePawnBaseColor = Color3.FromHexString("#f0e7d3");
 const defaultBlackPawnBaseColor = Color3.FromHexString("#252529");
@@ -14,15 +20,15 @@ const defaultBlackPawnBaseColor = Color3.FromHexString("#252529");
 const defaultWhiteSquareColor = Color3.FromHexString("#b4aa94");
 const defaultBlackSquareColor = Color3.FromHexString("#2d2d34");
 
-export class PawnMaterialGroup {
+export class PieceMaterialGroup {
   base: StandardMaterial;
   ghost: StandardMaterial;
-  moveGhostHighlight: StandardMaterial;
-  resetGhostHighlight: StandardMaterial;
-  attackGhostHighlight: StandardMaterial;
+  movementGhostHighlight: StandardMaterial;
+  cancelGhostHighlight: StandardMaterial;
+  captureGhostHighlight: StandardMaterial;
 
 
-  constructor(name: string, baseColor: Color3, ghostTransparency = 0.2, highlightTransparency = 0.4, highlightColors: Map<MoveType, Color3> = defaultHighlightColors, scene: Scene) {
+  constructor(name: string, baseColor: Color3, ghostTransparency = 0.2, highlightTransparency = 0.4, highlightColors: HightlightColors = defaultHighlightColors, scene: Scene) {
     this.base = new StandardMaterial(`${name}-base`, scene);
     this.base.diffuseColor = baseColor;
     
@@ -30,21 +36,17 @@ export class PawnMaterialGroup {
     this.ghost.diffuseColor = baseColor.add(Color3.FromHexString("#999999"));
     this.ghost.alpha = ghostTransparency;
     
-    this.moveGhostHighlight = this.ghost.clone(`${name}-ghost-move`);
-    this.moveGhostHighlight.alpha = highlightTransparency;
-    if(highlightColors.has(MoveType.MOVE)) {
-      this.moveGhostHighlight.diffuseColor = highlightColors.get(MoveType.MOVE)!;
-    }
-    this.resetGhostHighlight = this.ghost.clone(`${name}-ghost-reset`);
-    this.resetGhostHighlight.alpha = highlightTransparency;
-    if(highlightColors.has(MoveType.RESET)) {
-      this.moveGhostHighlight.diffuseColor = highlightColors.get(MoveType.RESET)!;
-    }
-    this.attackGhostHighlight = this.ghost.clone(`${name}-ghost-attack`);
-    this.attackGhostHighlight.alpha = highlightTransparency;
-    if(highlightColors.has(MoveType.ATTACK)) {
-      this.attackGhostHighlight.diffuseColor = highlightColors.get(MoveType.ATTACK)!;
-    }
+    this.movementGhostHighlight = this.ghost.clone(`${name}-ghost-move`);
+    this.movementGhostHighlight.alpha = highlightTransparency;
+    this.movementGhostHighlight.diffuseColor = highlightColors.movement;
+    
+    this.cancelGhostHighlight = this.ghost.clone(`${name}-ghost-reset`);
+    this.cancelGhostHighlight.alpha = highlightTransparency;
+    this.cancelGhostHighlight.diffuseColor = highlightColors.cancel;
+    
+    this.captureGhostHighlight = this.ghost.clone(`${name}-ghost-attack`);
+    this.captureGhostHighlight.alpha = highlightTransparency;
+    this.captureGhostHighlight.diffuseColor = highlightColors.capture;
   }
 
 }
@@ -74,8 +76,8 @@ export class MaterialManager {
   constructor(gameEngine: GameEngine) {
     this.gameEngine = gameEngine;
     this.boardMaterialGroup = new BoardMaterialGroup(this.gameEngine.scene);
-    this.whitePawnMaterialGroup = new PawnMaterialGroup("white", defaultWhitePawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
-    this.blackPawnMaterialGroup = new PawnMaterialGroup("black", defaultBlackPawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
+    this.whitePawnMaterialGroup = new PieceMaterialGroup("white", defaultWhitePawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
+    this.blackPawnMaterialGroup = new PieceMaterialGroup("black", defaultBlackPawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
   }
 
 }

@@ -1,13 +1,13 @@
 import { StandardMaterial, Color3, Vector2, MeshBuilder, Vector3, TransformNode, Tools, Space } from "@babylonjs/core";
-import { Pawn } from "./pawn/pawn";
+import { CheckersPawn } from "./piece/checkersPawn";
 import { GameRuleError } from "../gameEngine";
 import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./squareSelectionRule";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
 import { Player, PlayerId } from "../player";
-import { MoveType } from "./pawn/move";
 import { GameEngine } from "../engine/engine";
+import { CaptureMove } from "./piece/move";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -18,8 +18,8 @@ type BoardConfiguration = {
 
 export class Board extends TransformNode {
 
-  private pawns: Map<PlayerId, Pawn[]> = new Map();
-  public selectedPawn?: Pawn;
+  private pawns: Map<PlayerId, CheckersPawn[]> = new Map();
+  public selectedPiece?: CheckersPawn;
   private gameEngine: GameEngine;
   public originTileIsBlack = true;
   private squares: Map<string, Square> = new Map();
@@ -89,7 +89,7 @@ export class Board extends TransformNode {
     }
   }
 
-  public foreachPawn(callback: (pawn: Pawn) => void, player?: Player) {
+  public foreachPawn(callback: (pawn: CheckersPawn) => void, player?: Player) {
     if(player == null) {
       this.pawns.forEach((value) => {
         value.forEach(callback);
@@ -107,9 +107,9 @@ export class Board extends TransformNode {
       return;
     }
     
-    let owningPlayer = pawn.getOwningPlayer();
+    let owningPlayer = pawn.owner;
     let playerPawns = this.pawns.get(owningPlayer!.name)!;
-    this.pawns.set(owningPlayer!.name, playerPawns.filter((value) => value.coordinate != pawn!.coordinate));
+    this.pawns.set(owningPlayer!.name, playerPawns.filter((value) => value.currentSquare.coordinate != pawn!.currentSquare.coordinate));
 
     square.removePawn();
 
@@ -154,7 +154,7 @@ export class Board extends TransformNode {
       }
 
       if (setUpWhite) {
-        let pawn = new Pawn(true, this, square, this.gameManager, this.gameEngine);
+        let pawn = new CheckersPawn(this.gameManager.whitePlayer, this, square, this.gameManager, this.gameEngine);
         pawn.onLift = () => { this.selectPawn(pawn); };
         square.placePawn(pawn);
         this.pawns.get(this.gameManager.whitePlayer.name)?.push(pawn);
@@ -162,7 +162,7 @@ export class Board extends TransformNode {
       }
 
       if (setUpBlack) {
-        let pawn = new Pawn(false, this, square, this.gameManager, this.gameEngine);
+        let pawn = new CheckersPawn(this.gameManager.blackPlayer, this, square, this.gameManager, this.gameEngine);
         pawn.onLift = () => { this.selectPawn(pawn) };
         square.placePawn(pawn);
         this.pawns.get(this.gameManager.blackPlayer.name)?.push(pawn);
@@ -255,24 +255,24 @@ export class Board extends TransformNode {
     this.createPawns([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
   }
 
-  public selectPawn(pawn: Pawn) {
-    this.selectedPawn = pawn;
-    this.selectedPawn.calcAvailableMoves();
-    this.selectedPawn?.availableMoves.forEach(({move, instance}) => {
-      if(move.moveType == MoveType.ATTACK) {
-        move.square.getPawn()?.makeUnpickable();
+  public selectPawn(pawn: CheckersPawn) {
+    this.selectedPiece = pawn;
+    this.selectedPiece.calcAvailableMoves();
+    this.selectedPiece?.availableMoves.forEach(({move, instance}) => {
+      if(move instanceof CaptureMove) {
+        move.target.getPawn()?.makeUnpickable();
       }
     })
-    this.selectedPawn.showAvailableMoves();
+    this.selectedPiece.showAvailableMoves();
   }
 
   public deselectPawn() {
-    this.selectedPawn?.hideAvailableMoves();
-    this.selectedPawn?.availableMoves.forEach(({move, instance}) => {
-      if(move.moveType == MoveType.ATTACK) {
-        move.square.getPawn()?.makePickable();
+    this.selectedPiece?.hideAvailableMoves();
+    this.selectedPiece?.availableMoves.forEach(({move, instance}) => {
+      if(move instanceof CaptureMove) {
+        move.target.getPawn()?.makePickable();
       }
     })
-    this.selectedPawn = undefined;
+    this.selectedPiece = undefined;
   }
 }

@@ -1,9 +1,10 @@
 import { ActionManager, ExecuteCodeAction, Mesh, MeshBuilder, Nullable, PredicateCondition, Scene, StandardMaterial, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { Board } from "./board";
-import { Pawn } from "./pawn/pawn";
+import { CheckersPawn } from "./piece/checkersPawn";
 import { GameManager } from "../gameManager";
 import { shadowMapVertexDeclaration } from "@babylonjs/core/Shaders/ShadersInclude/shadowMapVertexDeclaration";
-import { MoveType } from "./pawn/move";
+import { Piece } from "./piece/piece";
+import { CaptureMove } from "./piece/move";
 
 
 export class Square extends TransformNode {
@@ -12,7 +13,7 @@ export class Square extends TransformNode {
   public coordinate: Vector2;
   private board: Board;
   private scene: Scene;
-  private pawn?: Pawn;
+  private pawn?: Piece;
   private gameManager: GameManager;
 
   constructor(name: string, coordinate: Vector2, size: Vector2, material: StandardMaterial, board: Board, gameManager: GameManager, scene: Scene) {
@@ -40,7 +41,7 @@ export class Square extends TransformNode {
     return mesh;
   }
 
-  public placePawn(pawn: Pawn) {
+  public placePawn(pawn: Piece) {
     this.pawn = pawn;
   }
   
@@ -69,17 +70,17 @@ class SquareActionManager extends ActionManager {
         (event) => {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
-            let move = board.selectedPawn?.availableMoves.get(source.parent.coordinate.toString());
+            let move = board.selectedPiece?.availableMoves.get(source.parent.coordinate.toString());
             if (move != null) {
-              if(move.move.moveType == MoveType.ATTACK) {
+              if(move.move instanceof CaptureMove) {
                 board.capturePawn(source.parent);
               }
-              board.selectedPawn?.place(source.parent);
+              board.selectedPiece?.place(source.parent);
               gameManager.nextTurn();
             }
           }
         },
-        new PredicateCondition(this, () => { return board.selectedPawn != undefined })
+        new PredicateCondition(this, () => { return board.selectedPiece != undefined })
       )
     )
     this.registerAction(
@@ -89,10 +90,10 @@ class SquareActionManager extends ActionManager {
         (event) => {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
-            board.selectedPawn?.highlightSquare(source.parent);
+            board.selectedPiece?.highlightSquare(source.parent);
           }
         },
-        new PredicateCondition(this, () => { return board.selectedPawn != undefined })
+        new PredicateCondition(this, () => { return board.selectedPiece != undefined })
       )
     )
     this.registerAction(
@@ -102,10 +103,10 @@ class SquareActionManager extends ActionManager {
         (event) => {
           let source = event.source
           if (source instanceof Mesh && source.parent instanceof Square) {
-            board.selectedPawn?.unhighlightAvailableMove();
+            board.selectedPiece?.unhighlightAvailableMove();
           }
         },
-        new PredicateCondition(this, () => { return board.selectedPawn != undefined })
+        new PredicateCondition(this, () => { return board.selectedPiece != undefined })
       )
     )
   }

@@ -1,6 +1,6 @@
 import { Board } from "./board/board";
-import { MoveType } from "./board/pawn/move";
-import { Pawn } from "./board/pawn/pawn";
+import { CheckersPawn } from "./board/piece/checkersPawn";
+import { CaptureMove } from "./board/piece/move";
 import { GameRuleError } from "./gameEngine";
 import { Player } from "./player";
 
@@ -8,7 +8,7 @@ export class Cpu {
 
   player: Player;
 
-  pawnWithMostMoves?: Pawn;
+  pawnWithMostMoves?: CheckersPawn;
 
   constructor(player: Player) {
     this.player = player;
@@ -16,7 +16,7 @@ export class Cpu {
 
   public takeTurn(onEndTurn: () => void, board: Board) {
     this.pawnWithMostMoves = undefined;
-    board.foreachPawn((pawn: Pawn) => {
+    board.foreachPawn((pawn: CheckersPawn) => {
       if (pawn.canBePlayedBy(this.player)) {
         pawn.calcAvailableMoves();
         if (this.pawnWithMostMoves == null) {
@@ -41,10 +41,10 @@ export class Cpu {
     setTimeout(() => {
       const selectMove = Math.floor(Math.random() * this.pawnWithMostMoves!.availableMoves.size);
       let move = Array.from(this.pawnWithMostMoves!.availableMoves)[selectMove][1].move;
-      if(move.moveType == MoveType.ATTACK) {
-        board.capturePawn(move.square);
+      if(move instanceof CaptureMove) {
+        board.capturePawn(move.target);
       }
-      this.pawnWithMostMoves!.place(move.square);
+      this.pawnWithMostMoves!.place(move.target);
       
       setTimeout(() => {
       onEndTurn();

@@ -16,7 +16,7 @@ export class GameManager {
   private turn: number;
   private turnType: TurnType;
 
-  private board: Board;
+  public board: Board;
 
   private gameEngine: GameEngine;
 

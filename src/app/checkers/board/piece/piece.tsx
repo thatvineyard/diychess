@@ -3,59 +3,54 @@ import { InstancedMesh, Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
 import { FRAMES_PER_SECOND, GameEngine } from "../../engine/engine";
 import { Board } from "../board";
 import { Square } from "../square";
-import { Move, MoveType } from "./move";
+import { CancelMove, CaptureMove, Move, MovementMove } from "./move";
 import { GameManager } from "../../gameManager";
 import { Player, PlayerSide } from "../../player";
-import { PawnMaterialGroup } from "../../engine/materialManager";
+import { EngineAware } from "../../engine/engineAware";
+import { PieceMaterialGroup } from "../../engine/materialManager";
 
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
 const MESH_SCALE = 0.85;
-enum State { NOT_DEFINED, LIFTED, PLACED }
+enum State { NOT_DEFINED, SELECTED, PLACED }
 
-export class Pawn {
+export abstract class Piece extends EngineAware {
 
   private mesh: Mesh;
   private ghost: Mesh;
   private highlighedGhost: Mesh;
-  public coordinate: Vector2;
   private state: State;
   private shakeAnimation: Animation;
   private liftAnimation: Animation;
   private placeAnimation: Animation;
   private pickupSound: Sound;
-  private gameEngine: GameEngine;
-  private board: Board;
+  protected board: Board;
   public availableMoves: Map<string, { move: Move, instance: InstancedMesh | undefined }> = new Map();
   private hightlightedMove?: Vector2;
-  private isWhite: boolean;
-  private currentSquare: Square;
-  private gameManager: GameManager;
-  private materialGroup: PawnMaterialGroup;
+  public currentSquare: Square;
+  protected gameManager: GameManager;
+  public owner: Player;
 
-  constructor(isWhite: boolean, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
-    this.gameEngine = gameEngine;
+  abstract createMesh(): Mesh;
+  abstract getMaterialGroup(): PieceMaterialGroup;
 
-    this.coordinate = square.coordinate;
+  constructor(owner: Player, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
+    super(gameEngine);
 
-    this.currentSquare = square;
 
     this.gameManager = gameManager;
     this.board = board;
-    const diameter = Math.min(this.board.getSquareSize().y, this.board.getSquareSize().x) * MESH_SCALE;
 
-    this.isWhite = isWhite;
-    this.materialGroup = this.isWhite ? this.gameEngine.materialManager!.whitePawnMaterialGroup : this.gameEngine.materialManager!.blackPawnMaterialGroup;
+    this.owner = owner;
 
-    const position = this.board.getTilePosition(this.coordinate);
+    this.mesh = this.createMesh();
+    this.mesh.material = this.getMaterialGroup().base;
 
-    this.mesh = MeshBuilder.CreateCylinder('pawn', { height: 0.1, diameter }, this.gameEngine.scene);
-    this.mesh.position = new Vector3(position.x, PLACED_HEIGHT, position.y);
-    this.mesh.parent = board;
-    this.mesh.material = this.materialGroup.base;
+    this.currentSquare = square;
+    this.moveToSquare(square);
 
     this.ghost = this.mesh.clone();
-    this.ghost.material = this.materialGroup.ghost;
+    this.ghost.material = this.getMaterialGroup().ghost;
     this.ghost.setEnabled(false);
 
     this.highlighedGhost = this.ghost.clone();
@@ -90,53 +85,35 @@ export class Pawn {
     placeEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.placeAnimation.setEasingFunction(placeEase);
 
-    this.mesh.actionManager = new PawnActionManager(this, this.board, this.gameManager, this.gameEngine.scene);
+    this.mesh.actionManager = this.getActionManager();
 
     this.state = State.PLACED;
 
-    this.pickupSound = new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.gameEngine.scene, null, { loop: false, autoplay: false, volume: 0.3 });
+    this.pickupSound = this.getPickupSound();
   }
 
   public canBePlayedBy(player: Player) {
-    if (this.isWhite) {
-      return player.playerSide == PlayerSide.WHITE;
-    } else {
-      return player.playerSide == PlayerSide.BLACK;
-    }
+    return this.owner.playerSide == player.playerSide;
   }
 
-  public calcAvailableMoves() {
-    this.availableMoves = new Map();
-    let distance = 1;
-    this.board.foreachSquare((square: Square) => {
-      let difference = square.coordinate.subtract(this.coordinate);
-      if (Math.abs(difference.x) <= distance && Math.abs(difference.y) <= distance) {
-        if (square.hasPawn()) {
-          if (square.getPawn()!.canBePlayedBy(this.gameManager.getCurrentPlayer())) {
-            return false;
-          } else {
-            this.availableMoves.set(square.coordinate.toString(), { move: new Move(square, MoveType.ATTACK), instance: undefined });
-            return;
-          }
-        }
-        this.availableMoves.set(square.coordinate.toString(), { move: new Move(square, MoveType.MOVE), instance: undefined });
-        return;
-      }
-    });
+  protected abstract getPickupSound(): Sound;
 
-    this.availableMoves.set(this.coordinate.toString(), { move: new Move(this.currentSquare, MoveType.RESET), instance: undefined });
+  protected getActionManager(): ActionManager {
+    return new PieceActionManager(this, this.gameManager, this.gameEngine);
   }
+
+  public abstract calcAvailableMoves(): void;
 
   public showAvailableMoves() {
     this.availableMoves.forEach((availableMove, _) => {
-      availableMove.instance = this.createGhostInstance(availableMove.move.square.coordinate);
+      availableMove.instance = this.createGhostInstance(availableMove.move.target.coordinate);
     });
   }
 
   public createGhostInstance(coordinate: Vector2) {
     let newInstance = this.ghost.createInstance(`${this.mesh.name} move: ${coordinate.x}:${coordinate.y}`);
     newInstance.isPickable = false;
-    newInstance.position = this.toPlacedPosition(this.board.getTilePosition(coordinate));
+    newInstance.position = this.vector2ToPlacedVector3(this.board.getTilePosition(coordinate));
     return newInstance;
   }
 
@@ -157,30 +134,27 @@ export class Pawn {
         ghostMove.instance?.dispose();
         ghostMove.instance = undefined;
 
-        this.highlighedGhost.position = this.toPlacedPosition(this.board.getTilePosition(square.coordinate));
-        this.highlighedGhost.material = this.getHighlightMaterial(ghostMove.move.moveType);
+        this.highlighedGhost.position = this.vector2ToPlacedVector3(this.board.getTilePosition(square.coordinate));
+        this.highlighedGhost.material = this.getHighlightMaterial(ghostMove.move);
         this.highlighedGhost.setEnabled(true);
 
       }
     }
   }
 
-  private getHighlightMaterial(moveType: MoveType) {
-    switch (moveType) {
-      case MoveType.MOVE:
-        return this.materialGroup.moveGhostHighlight;
-      case MoveType.ATTACK:
-        return this.materialGroup.attackGhostHighlight;
-      case MoveType.RESET:
-        return this.materialGroup.resetGhostHighlight;
-    };
-
+  private getHighlightMaterial(move: Move) {
+    if (move instanceof MovementMove) {
+      return this.getMaterialGroup().movementGhostHighlight;
+    }
+    if (move instanceof CaptureMove) {
+      return this.getMaterialGroup().captureGhostHighlight;
+    }
+    if (move instanceof CancelMove) {
+      return this.getMaterialGroup().cancelGhostHighlight;
+    }
+    return this.getMaterialGroup().ghost;
   }
 
-  public getOwningPlayer() {
-    return this.isWhite ? this.gameManager.whitePlayer : this.gameManager.blackPlayer;
-  }
-  
   public makePickable() {
     this.mesh.isPickable = true;
   }
@@ -199,13 +173,13 @@ export class Pawn {
 
       let ghostMove = this.availableMoves.get(this.hightlightedMove.toString())
       if (ghostMove != null) {
-        ghostMove.instance = this.createGhostInstance(ghostMove.move.square.coordinate);
+        ghostMove.instance = this.createGhostInstance(ghostMove.move.target.coordinate);
       }
       this.hightlightedMove = undefined;
     }
   }
 
-  private toPlacedPosition(position: Vector2) {
+  private vector2ToPlacedVector3(position: Vector2) {
     return new Vector3(position.x, PLACED_HEIGHT, position.y);
   }
 
@@ -219,45 +193,56 @@ export class Pawn {
     this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
     // this.scene.beginAnimation(this.pawn, 0, 20, true);
     // this.pawn.animations.push(this.shakeAnimation);
-    this.state = State.LIFTED;
+    this.state = State.SELECTED;
   }
 
   public place(square: Square) {
     this.mesh.animations.pop();
     this.gameEngine.scene.stopAnimation(this.mesh);
 
-    this.coordinate = square.coordinate;
+    this.moveToSquare(square, true);
 
-    this.currentSquare?.removePawn();
-    square.placePawn(this);
-    this.currentSquare = square;
-
-    let position = this.toPlacedPosition(this.board.getTilePosition(this.coordinate));
+    let position = this.vector2ToPlacedVector3(this.board.getTilePosition(this.currentSquare.coordinate));
 
     this.mesh.rotation = Vector3.Zero();
-    let moveVector = position.subtract(this.mesh.position);
-    moveVector.y = 0;
-    this.mesh.position = this.mesh.position.add(moveVector);
+
     this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
     this.state = State.PLACED;
     this.board.deselectPawn();
   }
 
+  public moveToSquare(target: Square, translation: Boolean = false) {
+    this.currentSquare?.removePawn();
+
+    if (translation) {
+      let currentPosition = this.board.getTilePosition(this.currentSquare.coordinate)
+      let targetPosition = this.board.getTilePosition(target.coordinate);
+      let moveVector2 = targetPosition.subtract(currentPosition);
+      let moveVector3 = this.vector2ToPlacedVector3(moveVector2);
+
+      this.mesh.translate(moveVector3, 1, Space.WORLD);
+    } else {
+      this.mesh.position = this.vector2ToPlacedVector3(this.board.getTilePosition(target.coordinate));
+    }
+
+    target.placePawn(this);
+    this.currentSquare = target;
+
+  }
 }
 
+class PieceActionManager extends ActionManager {
 
-class PawnActionManager extends ActionManager {
-
-  constructor(pawn: Pawn, board: Board, gameManager: GameManager, scene?: Nullable<Scene> | undefined) {
-    super(scene);
+  constructor(piece: Piece, gameManager: GameManager, gameEngine: GameEngine) {
+    super(gameEngine.scene);
     this.registerAction(
       new ExecuteCodeAction({
         trigger: ActionManager.OnPickTrigger,
       },
         (event) => {
-          pawn.lift();
+          piece.lift();
         },
-        new PredicateCondition(this, () => { return pawn.canBePlayedBy(gameManager.getCurrentPlayer()) && board.selectedPawn == undefined })
+        new PredicateCondition(this, () => { return piece.canBePlayedBy(gameManager.getCurrentPlayer()) && gameManager.board.selectedPiece == undefined })
       )
     )
   }
