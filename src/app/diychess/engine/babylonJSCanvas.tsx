@@ -9,7 +9,7 @@ type SceneComponentProps = {
   id: string,
 }
 
-export default function BabylonJSCanvas({ gameEngine: gameEngine, id, ...rest }: SceneComponentProps) {
+export default function BabylonJSCanvas({ gameEngine, id, ...rest }: SceneComponentProps) {
   const reactCanvas = useRef(null);
 
   // set up basic engine and scene
@@ -21,14 +21,14 @@ export default function BabylonJSCanvas({ gameEngine: gameEngine, id, ...rest }:
     gameEngine.start(canvas);
 
     if (window) {
-      window.addEventListener("resize", gameEngine.resize);
+      window.addEventListener("resize", () => gameEngine.resize());
     }
 
     return () => {
-      gameEngine.scene.getEngine().dispose();
+      gameEngine.babylonEngine?.dispose();
 
       if (window) {
-        window.removeEventListener("resize", gameEngine.resize);
+        window.removeEventListener("resize", () => gameEngine.resize());
       }
     };
   }, [gameEngine]);

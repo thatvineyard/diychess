@@ -99,12 +99,9 @@ export class SelectDiagonalExtents extends SelectAround {
     }
 
     let isOnCheckerboard = Math.abs(position.x - center.x) == Math.abs(position.y - center.y);
+    let isCenter = position == center;
 
-    if (!isOnCheckerboard) {
-      return false
-    }
-
-    return true;
+    return isOnCheckerboard && !isCenter;
   }
 }
 

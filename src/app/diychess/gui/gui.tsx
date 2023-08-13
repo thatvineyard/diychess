@@ -46,7 +46,7 @@ export class GameGui {
   setRoundNumberText(round: Round) {
     let text = this.advancedTexture.getControlByName("turn_number_text");
     if (text instanceof TextBlock) {
-      text.text = `${round.roundNumber}`;
+      text.text = `${round.roundNumber}: ${round.activeTurn?.moves[0]?.origin}`;
     }
   }
 }

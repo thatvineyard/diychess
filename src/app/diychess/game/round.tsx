@@ -20,7 +20,6 @@ export class Round {
       throw new Error("Tried setting up next turn when at end of player queue.");
     }
     let nextTurn = new Turn(this.dequeueNextPlayer());
-    console.log(`set up next turn with player ${nextTurn.activePlayer.name}`);
     if (this.activeTurn) {
       this.activeTurn.nextTurn = nextTurn;
       nextTurn.previousTurn = this.activeTurn;
@@ -38,6 +37,10 @@ export class Round {
 
   public onlastTurnOfRound() {
     return this.playerQueue.length <= 0;
+  }
+
+  public getLatestMove() {
+    return this.activeTurn!.moves.at(this.activeTurn!.moves.length - 1);
   }
 
 }

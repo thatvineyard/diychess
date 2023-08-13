@@ -3,7 +3,7 @@ import { GameManager } from "../../gameManager";
 import { Player } from "../../player/player";
 import { Board } from "../board";
 import { Square } from "../square";
-import { Move, MovementMove, CaptureMove, CancelMove } from "./move";
+import { Move, MovementMove, CaptureMove, CancelMove, MoveTag } from "./move";
 import { GameEngine } from "@/app/diychess/engine/gameEngine";
 import { EngineAware } from "@/app/diychess/engine/engineAware";
 import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
@@ -11,14 +11,12 @@ import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
 const MESH_SCALE = 0.85;
-enum State { NOT_DEFINED, SELECTED, PLACED }
 
 export abstract class Piece extends EngineAware {
 
   private mesh: Mesh;
   private ghost: Mesh;
   private highlighedGhost: Mesh;
-  private state: State;
   private shakeAnimation: Animation;
   private liftAnimation: Animation;
   private placeAnimation: Animation;
@@ -28,6 +26,7 @@ export abstract class Piece extends EngineAware {
   private hightlightedMove?: Vector2;
   public currentSquare: Square;
   protected gameManager: GameManager;
+  public placed: Boolean;
   public owner: Player;
 
   abstract createMesh(): Mesh;
@@ -35,6 +34,8 @@ export abstract class Piece extends EngineAware {
 
   constructor(owner: Player, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
     super(gameEngine);
+
+    this.placed = false;
 
 
     this.gameManager = gameManager;
@@ -86,8 +87,6 @@ export abstract class Piece extends EngineAware {
 
     this.mesh.actionManager = this.getActionManager();
 
-    this.state = State.PLACED;
-
     this.pickupSound = this.getPickupSound();
   }
 
@@ -101,7 +100,7 @@ export abstract class Piece extends EngineAware {
     return new PieceActionManager(this, this.gameManager, this.gameEngine);
   }
 
-  public abstract calcAvailableMoves(): void;
+  public abstract calcAvailableMoves(squareMask?: Vector2[], moveTagFilter?: MoveTag[]): void;
 
   public showAvailableMoves() {
     this.availableMoves.forEach((availableMove, _) => {
@@ -182,22 +181,24 @@ export abstract class Piece extends EngineAware {
     return new Vector3(position.x, PLACED_HEIGHT, position.y);
   }
 
-  public onLift() { }
-
   public lift(onLiftAnimationEnd?: () => void) {
-    this.onLift();
     this.mesh.animations.push(this.liftAnimation);
     this.pickupSound.play();
-    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false, 1, onLiftAnimationEnd);
-    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
+    this.gameEngine.runAnimation(this.mesh, [this.liftAnimation], 0, this.liftAnimation.getHighestFrame(), false, 1, onLiftAnimationEnd);
+    this.gameEngine.runAnimation(this.mesh, [this.shakeAnimation], 0, this.shakeAnimation.getHighestFrame(), true);
     // this.scene.beginAnimation(this.pawn, 0, 20, true);
     // this.pawn.animations.push(this.shakeAnimation);
-    this.state = State.SELECTED;
+    
+    this.placed = false;
   }
 
   public place(square: Square) {
+    if(this.placed) {
+      return;
+    }
+
     this.mesh.animations.pop();
-    this.gameEngine.scene.stopAnimation(this.mesh);
+    this.gameEngine.stopAnimation(this.mesh);
 
     this.moveToSquare(square, true);
 
@@ -205,9 +206,12 @@ export abstract class Piece extends EngineAware {
 
     this.mesh.rotation = Vector3.Zero();
 
-    this.gameEngine.scene.beginDirectAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
-    this.state = State.PLACED;
-    this.board.deselectPawn();
+    this.gameEngine.runAnimation(this.mesh, [this.placeAnimation], 0, this.placeAnimation.getHighestFrame(), false);
+    
+    this.placed = true;
+    
+    this.board.removeAvailableMoves();
+
   }
 
   public moveToSquare(target: Square, translation: Boolean = false) {
@@ -228,6 +232,17 @@ export abstract class Piece extends EngineAware {
     this.currentSquare = target;
 
   }
+
+  public allAvailableMovesAreCancel() {
+    var result = true;
+    
+    this.availableMoves.forEach(move => {
+      if(!(move.move instanceof CancelMove)) {
+        result = false;
+      }
+    })
+    return result;
+  }
 }
 
 class PieceActionManager extends ActionManager {
@@ -239,7 +254,8 @@ class PieceActionManager extends ActionManager {
         trigger: ActionManager.OnPickTrigger,
       },
         (event) => {
-          piece.lift();
+          gameManager.board.selectPiece(piece);
+          gameManager.board.createAvailableMoves();
         },
         new PredicateCondition(this, () => { return piece.canBePlayedBy(gameManager.getCurrentPlayer()) && gameManager.board.selectedPiece == undefined })
       )

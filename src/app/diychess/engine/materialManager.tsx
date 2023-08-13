@@ -1,6 +1,5 @@
 import { Color3, Material, Scene, StandardMaterial } from "@babylonjs/core";
-import { Move } from "../board/piece/move";
-import { GameEngine } from "./gameEngine";
+import { GameEngine, GameEngineError } from "./gameEngine";
 
 type HightlightColors = {
   movement: Color3,
@@ -75,6 +74,9 @@ export class MaterialManager {
 
   constructor(gameEngine: GameEngine) {
     this.gameEngine = gameEngine;
+    if(!this.gameEngine.scene) {
+      throw new GameEngineError("Can not create material manager before scene is loaded");
+    }
     this.boardMaterialGroup = new BoardMaterialGroup(this.gameEngine.scene);
     this.whitePawnMaterialGroup = new PieceMaterialGroup("white", defaultWhitePawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);
     this.blackPawnMaterialGroup = new PieceMaterialGroup("black", defaultBlackPawnBaseColor, undefined, undefined, undefined, this.gameEngine.scene);

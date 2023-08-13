@@ -1,3 +1,4 @@
+import { GameManager } from "../gameManager";
 import { Cpu } from "./cpu";
 
 export enum PlayerSide {
@@ -26,8 +27,8 @@ export class Player {
 export class CpuPlayer extends Player {
   cpu: Cpu;
 
-  constructor(name: PlayerId, playerSide: PlayerSide) {
+  constructor(name: PlayerId, playerSide: PlayerSide, gameManager: GameManager) {
     super(name, playerSide);
-    this.cpu = new Cpu(this);
+    this.cpu = new Cpu(this, gameManager);
   }
 }

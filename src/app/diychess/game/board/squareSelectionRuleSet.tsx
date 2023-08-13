@@ -43,7 +43,7 @@ export class SquareSelectionRuleSet {
     return anyRuleWasFalse;
   }
 
-  public select(position: Vector2, center?: Vector2) {
+  public checkSquare(position: Vector2, center?: Vector2) {
     return this.selectFromAdditiveRules(position, center) && this.selectFromMaskingRules(position, center);
   }
 

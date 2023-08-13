@@ -1,15 +1,15 @@
 import { Board } from "../board";
 import { Square } from "../square";
-import { CancelMove, CaptureMove, Move, MovementMove } from "./move";
+import { CancelMove, CaptureMove, Move, MoveOptions, MoveTag, MovementMove } from "./move";
 import { GameManager } from "../../gameManager";
 import { Piece } from "./piece";
 import { SquareSelectionRuleSet } from "../squareSelectionRuleSet";
 import { SelectDiagonalExtents, SelectDiagonalExtentsWithCurrentPlayersPieceBetween, SelectDiagonalExtentsWithOtherThanCurrentPlayersPieceBetween, SelectDiagonalExtentsWithPieceBetween, SelectEmptySquare } from "../squareSelectionRule";
 import { checkSquaresBetweenSquaresOnDiagonals } from "../boardUtils";
 import { Player, PlayerSide } from "../../player/player";
-import { GameEngine } from "@/app/checkers/engine/engine";
-import { PieceMaterialGroup } from "@/app/checkers/engine/materialManager";
-import { Mesh, MeshBuilder, Sound } from "@babylonjs/core";
+import { Mesh, MeshBuilder, Sound, Vector2 } from "@babylonjs/core";
+import { GameEngine } from "@/app/diychess/engine/gameEngine";
+import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
 
 const LIFT_HEIGHT = 1;
 const PLACED_HEIGHT = 0.05;
@@ -18,15 +18,18 @@ enum State { NOT_DEFINED, LIFTED, PLACED }
 
 export class CheckersPawn extends Piece {
 
-  private movementRuleSet = new SquareSelectionRuleSet();
+  private regularMoveRuleSet = new SquareSelectionRuleSet();
+  private jumpMoveRuleSet = new SquareSelectionRuleSet();
   private captureRuleSet = new SquareSelectionRuleSet();
-  
+
   constructor(owner: Player, board: Board, square: Square, gameManager: GameManager, gameEngine: GameEngine) {
     super(owner, board, square, gameManager, gameEngine);
 
-    this.movementRuleSet.addAdditiveRule(new SelectDiagonalExtents(board, 1));
-    this.movementRuleSet.addAdditiveRule(new SelectDiagonalExtentsWithCurrentPlayersPieceBetween(board, 2, owner));
-    this.movementRuleSet.addMaskingRule(new SelectEmptySquare(board));
+    this.regularMoveRuleSet.addAdditiveRule(new SelectDiagonalExtents(board, 1));
+    this.regularMoveRuleSet.addMaskingRule(new SelectEmptySquare(board));
+
+    this.jumpMoveRuleSet.addAdditiveRule(new SelectDiagonalExtentsWithCurrentPlayersPieceBetween(board, 2, owner));
+    this.jumpMoveRuleSet.addMaskingRule(new SelectEmptySquare(board));
 
     this.captureRuleSet.addAdditiveRule(new SelectDiagonalExtentsWithOtherThanCurrentPlayersPieceBetween(board, 2, owner));
     this.captureRuleSet.addMaskingRule(new SelectEmptySquare(board));
@@ -44,54 +47,88 @@ export class CheckersPawn extends Piece {
   }
 
   protected getPickupSound(): Sound {
-    return new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.gameEngine.scene, null, { loop: false, autoplay: false, volume: 0.3 });
+    return new Sound("POP", "./sfx/comedy_bubble_pop_003.mp3", this.gameEngine.scene, null, { loop: false, autoplay: false, volume: 0.05 });
   }
 
   // 
   // 
 
-  public calcAvailableMoves() {
+  public calcAvailableMoves(squareMask: Vector2[] = [], moveTagFilter: MoveTag[] = []) {
     this.availableMoves = new Map();
     this.board.foreachSquare((square: Square) => {
-      if (this.movementRuleSet.select(square.coordinate, this.currentSquare.coordinate)) {
-        this.availableMoves.set(square.coordinate.toString(), { move: new MovementMove(square), instance: undefined });
+      if (squareMask.length > 0 && squareMask.includes(square.coordinate)) {
         return;
       }
-      if (this.captureRuleSet.select(square.coordinate, this.currentSquare.coordinate)) {
-        var target: Square | undefined;
 
-        checkSquaresBetweenSquaresOnDiagonals((square) => {
-          if(target != null) {
-            return;
-          }
-
-          let piece = square.getPawn();
-          if(piece != null && piece.owner.name != this.owner.name) {
-            target = square;
-          }
-        }, this.board, this.currentSquare.coordinate, square.coordinate);
-
-        if(!target) {
-          throw new Error("Could not find target when creating checkers capture move");
-          return
+      if (moveTagFilter.length == 0 || moveTagFilter.filter(tag => tag == MoveTag.MOVEMENT).length > 0) {
+        if (this.regularMoveRuleSet.checkSquare(square.coordinate, this.currentSquare.coordinate)) {
+          this.availableMoves.set(square.coordinate.toString(), { move: new MovementMove(this, this.currentSquare, square), instance: undefined });
+          return;
         }
-
-        this.availableMoves.set(square.coordinate.toString(), { move: new CheckersCaptureMove(square, target), instance: undefined });
-        return;
       }
-      return;
+
+      if (moveTagFilter.length == 0 || moveTagFilter.filter(tag => tag == MoveTag.MOVEMENT || tag == MoveTag.JUMP).length > 0) {
+        if (this.jumpMoveRuleSet.checkSquare(square.coordinate, this.currentSquare.coordinate)) {
+          this.availableMoves.set(square.coordinate.toString(), { move: new CheckersJumpMove(this, this.currentSquare, square, { doNotEndTurn: true }), instance: undefined });
+          return;
+        }
+      }
+
+      if (moveTagFilter.length == 0 || moveTagFilter.filter(tag => tag == MoveTag.CAPTURE || tag == MoveTag.JUMP).length > 0) {
+        if (this.captureRuleSet.checkSquare(square.coordinate, this.currentSquare.coordinate)) {
+          var target: Square | undefined;
+
+          checkSquaresBetweenSquaresOnDiagonals((square) => {
+            if (target != null) {
+              return;
+            }
+
+            let piece = square.getPawn();
+            if (piece != null && piece.owner.name != this.owner.name) {
+              target = square;
+            }
+          }, this.board, this.currentSquare.coordinate, square.coordinate);
+
+          if (!target) {
+            throw new Error("Could not find target when creating checkers capture move");
+          }
+
+          this.availableMoves.set(square.coordinate.toString(), { move: new CheckersCaptureMove(this, this.currentSquare, square, target), instance: undefined });
+          return;
+        }
+      }
     });
 
-    this.availableMoves.set(this.currentSquare.coordinate.toString(), { move: new CancelMove(this.currentSquare), instance: undefined });
+    if (moveTagFilter.length == 0 || moveTagFilter.filter(tag => tag == MoveTag.CANCEL).length > 0) {
+      this.availableMoves.set(this.currentSquare.coordinate.toString(), { move: new CancelMove(this, this.currentSquare, this.currentSquare), instance: undefined });
+    }
   }
 }
 
-class CheckersCaptureMove extends CaptureMove {
+const CAPTURE_MOVE_OPTIONS: MoveOptions = {
+  doNotEndTurn: true,
+}
 
-  constructor(target: Square, captureSquare: Square) {
-    super(target);
+export class CheckersCaptureMove extends CaptureMove {
+  protected moveTags: MoveTag[] = [...this.moveTags, MoveTag.JUMP];
+
+  constructor(piece: Piece, origin: Square, target: Square, captureSquare: Square, options?: MoveOptions) {
+    if (!options) {
+      options = CAPTURE_MOVE_OPTIONS;
+    }
+    super(piece, origin, target, options);
 
     this.captureSquare = captureSquare;
+
+  }
+
+}
+
+export class CheckersJumpMove extends MovementMove {
+  protected moveTags: MoveTag[] = [...this.moveTags, MoveTag.JUMP];
+
+  constructor(piece: Piece, origin: Square, target: Square, options?: MoveOptions) {
+    super(piece, origin, target, options);
 
   }
 

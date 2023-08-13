@@ -1,13 +1,13 @@
 import { StandardMaterial, Color3, Vector2, MeshBuilder, Vector3, TransformNode, Tools, Space } from "@babylonjs/core";
-import { CheckersPawn } from "./piece/checkersPawn";
+import { Piece } from "./piece/piece";
 import { SelectBottomRanks, SelectTopRanks, SelectWhiteSquares, SquareSelectionRule } from "./squareSelectionRule";
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { Square } from "./square";
-import { GameManager } from "../gameManager";
-import { CaptureMove } from "./piece/move";
-import { GameEngine } from "../../engine/gameEngine";
+import { GameManager, GameRuleError } from "../gameManager";
+import { CaptureMove, MoveTag } from "./piece/move";
+import { GameEngine, GameEngineError } from "../../engine/gameEngine";
 import { Player, PlayerId } from "../player/player";
-import { GameRuleError } from "../../engine/babylonJSRunner";
+import { CheckersPawn } from "./piece/checkersPawn";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -18,8 +18,8 @@ type BoardConfiguration = {
 
 export class Board extends TransformNode {
 
-  private pawns: Map<PlayerId, CheckersPawn[]> = new Map();
-  public selectedPiece?: CheckersPawn;
+  private pawns: Map<PlayerId, Piece[]> = new Map();
+  public selectedPiece?: Piece;
   private gameEngine: GameEngine;
   public originTileIsBlack = true;
   private squares: Map<string, Square> = new Map();
@@ -89,24 +89,24 @@ export class Board extends TransformNode {
     }
   }
 
-  public foreachPawn(callback: (pawn: CheckersPawn) => void, player?: Player) {
-    if(player == null) {
+  public foreachPawn(callback: (pawn: Piece) => void, player?: Player) {
+    if (player == null) {
       this.pawns.forEach((value) => {
         value.forEach(callback);
       })
       return
     }
-    
+
     this.pawns.get(player.name)?.forEach(callback);
   }
 
   public capturePawn(square: Square) {
     let pawn = square.getPawn();
-    if(pawn == null) {
+    if (pawn == null) {
       console.warn("tried to capture an unoccupied square");
       return;
     }
-    
+
     let owningPlayer = pawn.owner;
     let playerPawns = this.pawns.get(owningPlayer!.name)!;
     this.pawns.set(owningPlayer!.name, playerPawns.filter((value) => value.currentSquare.coordinate != pawn!.currentSquare.coordinate));
@@ -130,7 +130,7 @@ export class Board extends TransformNode {
       } else {
         material = this.gameEngine.materialManager!.boardMaterialGroup.blackSquare;
       }
-      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.gameEngine.scene));
+      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.gameEngine.scene!));
     })
   }
 
@@ -154,18 +154,16 @@ export class Board extends TransformNode {
       }
 
       if (setUpWhite) {
-        let pawn = new CheckersPawn(this.gameManager.whitePlayer, this, square, this.gameManager, this.gameEngine);
-        pawn.onLift = () => { this.selectPawn(pawn); };
-        square.placePawn(pawn);
-        this.pawns.get(this.gameManager.whitePlayer.name)?.push(pawn);
+        let piece = new CheckersPawn(this.gameManager.whitePlayer, this, square, this.gameManager, this.gameEngine);
+        square.placePawn(piece);
+        this.pawns.get(this.gameManager.whitePlayer.name)?.push(piece);
         return;
       }
 
       if (setUpBlack) {
-        let pawn = new CheckersPawn(this.gameManager.blackPlayer, this, square, this.gameManager, this.gameEngine);
-        pawn.onLift = () => { this.selectPawn(pawn) };
-        square.placePawn(pawn);
-        this.pawns.get(this.gameManager.blackPlayer.name)?.push(pawn);
+        let piece = new CheckersPawn(this.gameManager.blackPlayer, this, square, this.gameManager, this.gameEngine);
+        square.placePawn(piece);
+        this.pawns.get(this.gameManager.blackPlayer.name)?.push(piece);
         return;
       }
     })
@@ -255,24 +253,45 @@ export class Board extends TransformNode {
     this.createPawns([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
   }
 
-  public selectPawn(pawn: CheckersPawn) {
-    this.selectedPiece = pawn;
-    this.selectedPiece.calcAvailableMoves();
-    this.selectedPiece?.availableMoves.forEach(({move, instance}) => {
-      if(move instanceof CaptureMove) {
+  public selectPiece(piece: Piece) {
+    this.selectedPiece = piece;
+    this.selectedPiece.lift();
+  }
+
+  public createAvailableMoves(squareMask?: Vector2[], moveTagFilter?: MoveTag[]) {
+    if (!this.selectedPiece) {
+      throw new GameEngineError("No piece selected")
+    }
+
+    this.selectedPiece.calcAvailableMoves(squareMask, moveTagFilter);
+    this.selectedPiece?.availableMoves.forEach(({ move, instance }) => {
+      if (move instanceof CaptureMove) {
         move.target.getPawn()?.makeUnpickable();
       }
     })
     this.selectedPiece.showAvailableMoves();
   }
 
-  public deselectPawn() {
+  public removeAvailableMoves() {
     this.selectedPiece?.hideAvailableMoves();
-    this.selectedPiece?.availableMoves.forEach(({move, instance}) => {
-      if(move instanceof CaptureMove) {
+    this.selectedPiece?.availableMoves.forEach(({ move, instance }) => {
+      if (move instanceof CaptureMove) {
         move.target.getPawn()?.makePickable();
       }
     })
+  }
+
+  public allAvailableMovesAreCancel() {
+    let result = this.selectedPiece?.allAvailableMovesAreCancel();
+    return result;
+  }
+
+  public hasAvailableMoves() {
+    return this.selectedPiece?.availableMoves.size ?? 0 > 0;
+  }
+
+  public deselectPiece() {
+    this.selectedPiece?.place(this.selectedPiece?.currentSquare);
     this.selectedPiece = undefined;
   }
 }

@@ -3,6 +3,7 @@ import { GameEngine, GameEngineError } from "../engine/gameEngine";
 import { Board } from "./board/board";
 import { CpuPlayer, Player, PlayerSide } from "./player/player";
 import { Round } from "./round";
+import { Move } from "./board/piece/move";
 
 export enum TurnType {
   WHITE_TURN,
@@ -31,6 +32,8 @@ export class GameManager {
 
   private gameEngine: GameEngine;
 
+  private turnInProgress: Boolean;
+
   private gameEnded = false;
 
   constructor(gameEngine: GameEngine) {
@@ -44,6 +47,8 @@ export class GameManager {
     this.rounds = new Array();
 
     this.board = this.createBoard();
+
+    this.turnInProgress = false;
   }
 
   private createBoard() {
@@ -53,7 +58,12 @@ export class GameManager {
 
   public startGame() {
     this.setUpNextRound();
-    this.startTurn();
+  }
+
+  public renderLoop() {
+    if(!this.turnInProgress) {
+      this.startTurn();
+    }
   }
 
   public setUpNextRound() {
@@ -68,6 +78,15 @@ export class GameManager {
     this.currentRound.setUpNextTurn();
   }
 
+  public registerMove(move: Move) {
+    this.currentRound?.activeTurn?.moves.push(move);
+    
+  }
+
+  public getLatestMove() {
+    return this.currentRound!.getLatestMove();
+  }
+
   public getRound() {
     return this.currentRound;
   }
@@ -77,27 +96,29 @@ export class GameManager {
   }
 
   public startTurn() {
+    this.turnInProgress = true;
     this.gameEngine.updateGui();
     let currentPlayer = this.getCurrentPlayer();
     if (currentPlayer instanceof CpuPlayer) {
-      currentPlayer.cpu.takeTurn(() => { 
+      currentPlayer.cpu.takeTurn(this.board).then(() => {
         this.endTurn();
-      }, this.board);
+      });
     }
   }
 
   public endTurn() {
-    if(!this.currentRound) {
+    if (!this.currentRound) {
       throw new GameEngineError("Tried ending a turn when no round had been set up.");
     }
 
-    if(this.currentRound.onlastTurnOfRound()) {
-      console.log("next round!");
+    this.board.deselectPiece();
+
+    if (this.currentRound.onlastTurnOfRound()) {
       this.setUpNextRound();
     } else {
       this.currentRound.setUpNextTurn();
     }
-    this.startTurn();
+    this.turnInProgress = false;
   }
 
   private generatePlayerQueue() {
@@ -109,10 +130,10 @@ export class GameManager {
   }
 
   public getCurrentPlayer() {
-    if(!this.currentRound) {
+    if (!this.currentRound) {
       throw new GameEngineError("Round not started");
     }
-    if(!this.currentRound.activeTurn) {
+    if (!this.currentRound.activeTurn) {
       throw new GameEngineError("Turn not started");
     }
     return this.currentRound.activeTurn.activePlayer;
@@ -123,7 +144,7 @@ export class GameManager {
   }
 
   public addCpuPlayer(name: string, side: PlayerSide) {
-    this.players.push(new CpuPlayer(name, side));
+    this.players.push(new CpuPlayer(name, side, this));
   }
 
   public reset() {
@@ -134,4 +155,4 @@ export class GameManager {
 }
 
 
-export class GameRuleError extends Error {}
+export class GameRuleError extends Error { }
