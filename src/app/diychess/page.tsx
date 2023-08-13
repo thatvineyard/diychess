@@ -2,7 +2,7 @@
 
 import React from "react";
 import "./canvas.css";
-import BabylonJSRunner from "./engine/gameEngine";
+import BabylonJSRunner from "./engine/babylonJSRunner";
 
 export default function DiyChessPage() {
   return (

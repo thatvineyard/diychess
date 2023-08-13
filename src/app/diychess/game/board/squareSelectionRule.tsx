@@ -120,7 +120,6 @@ export class SelectDiagonalExtentsWithPieceBetween extends SelectDiagonalExtents
   }
 
   protected checkIfOwnedByPlayer(square: Square) {
-    console.log("oh no");
     return true;
   }
 

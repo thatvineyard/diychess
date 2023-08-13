@@ -76,7 +76,7 @@ class SquareActionManager extends ActionManager {
                 board.capturePawn(move.move.captureSquare);
               }
               board.selectedPiece?.place(source.parent);
-              gameManager.nextTurn();
+              gameManager.endTurn();
             }
           }
         },

@@ -4,7 +4,7 @@ import { Player } from "../../player/player";
 import { Board } from "../board";
 import { Square } from "../square";
 import { Move, MovementMove, CaptureMove, CancelMove } from "./move";
-import { GameEngine } from "@/app/diychess/engine/engine";
+import { GameEngine } from "@/app/diychess/engine/gameEngine";
 import { EngineAware } from "@/app/diychess/engine/engineAware";
 import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
 
@@ -56,7 +56,7 @@ export abstract class Piece extends EngineAware {
     this.highlighedGhost.isPickable = false;
     this.highlighedGhost.setEnabled(false);
 
-    this.shakeAnimation = new Animation("pawn_shake", "rotation.z", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
+    this.shakeAnimation = new Animation("pawn_shake", "rotation.z", GameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_YOYO);
     this.shakeAnimation.setKeys(
       [
         { frame: 0, value: -0.1 }, { frame: 20, value: 0.1 }
@@ -64,7 +64,7 @@ export abstract class Piece extends EngineAware {
     );
     this.shakeAnimation.setEasingFunction(new CircleEase());
 
-    this.liftAnimation = new Animation("pawn_lift", "position.y", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
+    this.liftAnimation = new Animation("pawn_lift", "position.y", GameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.liftAnimation.setKeys(
       [
         { frame: 0, value: PLACED_HEIGHT }, { frame: 50, value: LIFT_HEIGHT }
@@ -74,7 +74,7 @@ export abstract class Piece extends EngineAware {
     liftEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
     this.liftAnimation.setEasingFunction(liftEase);
 
-    this.placeAnimation = new Animation("pawn_lift", "position.y", gameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
+    this.placeAnimation = new Animation("pawn_lift", "position.y", GameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.placeAnimation.setKeys(
       [
         { frame: 0, value: LIFT_HEIGHT }, { frame: 30, value: PLACED_HEIGHT }

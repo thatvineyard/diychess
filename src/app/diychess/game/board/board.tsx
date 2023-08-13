@@ -5,9 +5,9 @@ import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
 import { Square } from "./square";
 import { GameManager } from "../gameManager";
 import { CaptureMove } from "./piece/move";
-import { GameEngine } from "../../engine/engine";
+import { GameEngine } from "../../engine/gameEngine";
 import { Player, PlayerId } from "../player/player";
-import { GameRuleError } from "../../engine/gameEngine";
+import { GameRuleError } from "../../engine/babylonJSRunner";
 
 type BoardConfiguration = {
   dimensions: Vector2;
@@ -63,7 +63,7 @@ export class Board extends TransformNode {
   }
 
   public finalizeTurn() {
-    this.gameManager.nextTurn();
+    this.gameManager.setUpNextRound();
   }
 
   public foreachSquare(callback: (square: Square) => void) {

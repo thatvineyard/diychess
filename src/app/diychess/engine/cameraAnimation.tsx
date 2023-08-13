@@ -1,5 +1,5 @@
 import { Scene, ArcRotateCamera, Vector3, Animation, CubicEase, EasingFunction, AnimationAssetTask } from "@babylonjs/core";
-import { FRAMES_PER_SECOND } from "./engine";
+import { GameEngine } from "./gameEngine";
 
 const SPEED_RATIO = 1.5;
 const LOOP_MODE = false;
@@ -155,7 +155,7 @@ function createCameraAnimation({
   const animation = Animation.CreateAnimation(
     property,
     to instanceof Vector3 ? Animation.ANIMATIONTYPE_VECTOR3 : Animation.ANIMATIONTYPE_FLOAT,
-    FRAMES_PER_SECOND,
+    GameEngine.FRAMES_PER_SECOND,
     ease
   );
   animation.setKeys([

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Engine, EngineOptions, Scene, SceneOptions } from "@babylonjs/core";
-import { GameEngine } from "./engine";
+import { GameEngine } from "./gameEngine";
 
 type SceneComponentProps = {
   gameEngine: GameEngine,

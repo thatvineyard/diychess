@@ -1,83 +1,137 @@
 import { Vector2, Vector3 } from "@babylonjs/core";
-import { GameEngine } from "../engine/engine";
+import { GameEngine, GameEngineError } from "../engine/gameEngine";
 import { Board } from "./board/board";
 import { CpuPlayer, Player, PlayerSide } from "./player/player";
+import { Round } from "./round";
 
 export enum TurnType {
   WHITE_TURN,
   BLACK_TURN,
 }
 
+const BOARD_CONFIG = {
+  dimensions: new Vector2(8, 8),
+  originTileIsBlack: true,
+  meshSize: new Vector3(10, 10, 0.5),
+  borderSize: 1,
+}
+
 export class GameManager {
+
+  private players: Array<Player> = new Array();
 
   public whitePlayer: Player;
   public blackPlayer: Player;
 
-  private turn: number;
-  private turnType: TurnType;
+  private rounds: Array<Round>;
+  private currentRound?: Round;
+  private playerOrder: Array<Player> = new Array();
 
   public board: Board;
 
   private gameEngine: GameEngine;
 
-  public onNextTurn: () => void = () => { };
-
-  private boardConfiguration = {
-    dimensions: new Vector2(8, 8),
-    originTileIsBlack: true,
-    meshSize: new Vector3(10, 10, 0.5),
-    borderSize: 1,
-  }
+  private gameEnded = false;
 
   constructor(gameEngine: GameEngine) {
     this.gameEngine = gameEngine;
-    this.whitePlayer = new CpuPlayer("white", PlayerSide.WHITE);
-    this.blackPlayer = new CpuPlayer("black", PlayerSide.BLACK);
+    this.addPlayer("white", PlayerSide.WHITE);
+    this.addCpuPlayer("black", PlayerSide.BLACK);
 
-    this.turn = 0;
+    this.whitePlayer = this.players.at(0)!;
+    this.blackPlayer = this.players.at(1)!;
 
-    this.turnType = TurnType.WHITE_TURN;
+    this.rounds = new Array();
 
-    this.board = new Board('board', this.boardConfiguration, this, this.gameEngine);
+    this.board = this.createBoard();
   }
 
-  public nextTurn() {
-    this.turn++;
-    this.turnType = this.getNextTurnType(this.turnType);
-    this.onNextTurn();
+  private createBoard() {
+    return new Board('board', BOARD_CONFIG, this, this.gameEngine);
+  }
+
+
+  public startGame() {
+    this.setUpNextRound();
     this.startTurn();
   }
 
-  public startTurn() {
-    let currentPlayer = this.getCurrentPlayer()
-    if (currentPlayer instanceof CpuPlayer) {
-      currentPlayer.cpu.takeTurn(() => {
-        this.nextTurn();
-      },this.board);
+  public setUpNextRound() {
+    let playerQueue = this.generatePlayerQueue();
+    if (this.currentRound == null) {
+      this.currentRound = new Round(playerQueue);
+      this.rounds.push(this.currentRound);
+    } else {
+      this.currentRound = new Round(playerQueue, this.currentRound);
+      this.rounds.push(this.currentRound);
     }
+    this.currentRound.setUpNextTurn();
+  }
+
+  public getRound() {
+    return this.currentRound;
+  }
+
+  public getTurn() {
+    return this.currentRound?.activeTurn;
+  }
+
+  public startTurn() {
+    this.gameEngine.updateGui();
+    let currentPlayer = this.getCurrentPlayer();
+    if (currentPlayer instanceof CpuPlayer) {
+      currentPlayer.cpu.takeTurn(() => { 
+        this.endTurn();
+      }, this.board);
+    }
+  }
+
+  public endTurn() {
+    if(!this.currentRound) {
+      throw new GameEngineError("Tried ending a turn when no round had been set up.");
+    }
+
+    if(this.currentRound.onlastTurnOfRound()) {
+      console.log("next round!");
+      this.setUpNextRound();
+    } else {
+      this.currentRound.setUpNextTurn();
+    }
+    this.startTurn();
+  }
+
+  private generatePlayerQueue() {
+    let playerQueue = new Array<Player>();
+    this.players.forEach(player => {
+      playerQueue.push(player);
+    });
+    return playerQueue;
   }
 
   public getCurrentPlayer() {
-    switch (this.turnType) {
-      case TurnType.WHITE_TURN:
-        return this.whitePlayer;
-      case TurnType.BLACK_TURN:
-        return this.blackPlayer;
+    if(!this.currentRound) {
+      throw new GameEngineError("Round not started");
     }
+    if(!this.currentRound.activeTurn) {
+      throw new GameEngineError("Turn not started");
+    }
+    return this.currentRound.activeTurn.activePlayer;
   }
 
-  private getNextTurnType(currentTurnType: TurnType) {
-    switch (this.turnType) {
-      case TurnType.WHITE_TURN:
-        return TurnType.BLACK_TURN;
-      case TurnType.BLACK_TURN:
-        return TurnType.WHITE_TURN;
-    }
+  public addPlayer(name: string, side: PlayerSide) {
+    this.players.push(new Player(name, side));
+  }
+
+  public addCpuPlayer(name: string, side: PlayerSide) {
+    this.players.push(new CpuPlayer(name, side));
   }
 
   public reset() {
     this.board.dispose();
-    this.board = new Board('board', this.boardConfiguration, this, this.gameEngine);
+    this.board = this.createBoard();
   }
 
 }
+
+
+export class GameRuleError extends Error {}

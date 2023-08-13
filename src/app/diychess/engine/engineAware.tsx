@@ -1,4 +1,4 @@
-import { GameEngine } from "./engine";
+import { GameEngine } from "./gameEngine";
 
 export class EngineAware {
 

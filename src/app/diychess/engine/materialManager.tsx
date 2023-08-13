@@ -1,6 +1,6 @@
 import { Color3, Material, Scene, StandardMaterial } from "@babylonjs/core";
 import { Move } from "../board/piece/move";
-import { GameEngine } from "./engine";
+import { GameEngine } from "./gameEngine";
 
 type HightlightColors = {
   movement: Color3,

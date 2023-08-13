@@ -1,5 +1,4 @@
 import { ArcRotateCamera, Camera, Nullable, Scene, Tools, Vector3, Animation, EasingFunction, CubicEase } from "@babylonjs/core";
-import { FRAMES_PER_SECOND } from "./engine";
 import { animateCamera } from "./cameraAnimation";
 
 const DEFAULT_CAMERA_NAME = "camera_main";

@@ -1,4 +1,4 @@
-import { GameRuleError } from "../../engine/gameEngine";
+import { GameRuleError } from "../../engine/babylonJSRunner";
 import { Board } from "../board/board";
 import { CheckersPawn } from "../board/piece/checkersPawn";
 import { CaptureMove } from "../board/piece/move";
