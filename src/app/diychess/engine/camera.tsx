@@ -1,5 +1,6 @@
-import { ArcRotateCamera, Camera, Nullable, Scene, Tools, Vector3, Animation, EasingFunction, CubicEase } from "@babylonjs/core";
+import { ArcRotateCamera, Camera, Nullable, Scene, Tools, Vector3, Animation, EasingFunction, CubicEase, LensRenderingPipeline } from "@babylonjs/core";
 import { animateCamera } from "./cameraAnimation";
+import { GameEngine } from "./gameEngine";
 
 const DEFAULT_CAMERA_NAME = "camera_main";
 
@@ -8,8 +9,8 @@ const DEFAULT_CAMERA_BETA = Tools.ToRadians(45);
 const DEFAULT_CAMERA_RADIUS = 25;
 const DEFAULT_CAMERA_TARGET = Vector3.Zero();
 
-export function createCamera(scene: Scene) {
-  const camera = new ArcRotateCamera(DEFAULT_CAMERA_NAME, DEFAULT_CAMERA_ALPHA, DEFAULT_CAMERA_BETA, DEFAULT_CAMERA_RADIUS, DEFAULT_CAMERA_TARGET, scene);
+export function createCamera(gameEngine: GameEngine) {
+  const camera = new ArcRotateCamera(DEFAULT_CAMERA_NAME, DEFAULT_CAMERA_ALPHA, DEFAULT_CAMERA_BETA, DEFAULT_CAMERA_RADIUS, new Vector3(0, gameEngine!.gameManager!.board.getPlacementHeight(), 0), gameEngine.scene);
 
   camera.wheelDeltaPercentage = 0.01;
   camera.zoomToMouseLocation = true;
@@ -17,9 +18,38 @@ export function createCamera(scene: Scene) {
   camera.fov = 0.4;
 
   // This attaches the camera to the canvas
-  const canvas = scene.getEngine().getRenderingCanvas();
+  const canvas = gameEngine.scene!.getEngine().getRenderingCanvas();
   camera.attachControl(canvas, true);
+
+  var lensEffect = new LensRenderingPipeline('lens', {
+		edge_blur: 0,
+		chromatic_aberration: 1.0,
+		distortion: 0.2,
+		dof_focus_distance: camera.radius + 10,
+		dof_aperture: 0.5,			// set this very high for tilt-shift effect
+		grain_amount: 1.0,
+		dof_pentagon: true,
+		dof_gain: 1.0,
+		dof_threshold: 1.0,
+		dof_darken: 0.25
+	}, gameEngine.scene!, 1.0, [camera]);
+
+  gameEngine.scene!.onAfterRenderCameraObservable.add(camera => {
+    if(camera instanceof ArcRotateCamera) {
+      if(isArcRotateCameraMoving(camera)) {
+        lensEffect.setFocusDistance(camera.radius + 10);
+      }
+    }
+  })
 }
+
+const isArcRotateCameraMoving = (camera: ArcRotateCamera) => {
+  return camera.inertialAlphaOffset !== 0 
+      || camera.inertialBetaOffset !== 0
+      || camera.inertialRadiusOffset !== 0
+      || camera.inertialPanningX !== 0
+      || camera.inertialPanningY !== 0;
+};
 
 export function getCamera(scene: Scene): ArcRotateCamera {
   var camera = scene.getCameraByName(DEFAULT_CAMERA_NAME);
@@ -32,7 +62,6 @@ export function getCamera(scene: Scene): ArcRotateCamera {
 
 export function debugLogCamera(scene: Scene) {
   var camera = getCamera(scene);
-  console.debug({ target: camera.getTarget().toString(), position: camera.position.toString() });
 }
 
 export function resetCamera(

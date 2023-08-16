@@ -9,7 +9,6 @@ import { EngineAware } from "@/app/diychess/engine/engineAware";
 import { PieceMaterialGroup } from "@/app/diychess/engine/materialManager";
 
 const LIFT_HEIGHT = 1;
-const PLACED_HEIGHT = 0.05;
 const MESH_SCALE = 0.85;
 
 export abstract class Piece extends EngineAware {
@@ -45,6 +44,7 @@ export abstract class Piece extends EngineAware {
 
     this.mesh = this.createMesh();
     this.mesh.material = this.getMaterialGroup().base;
+    this.gameEngine.environmentManager!.addShadowCaster(this.mesh);
 
     this.currentSquare = square;
     this.moveToSquare(square);
@@ -68,7 +68,7 @@ export abstract class Piece extends EngineAware {
     this.liftAnimation = new Animation("pawn_lift", "position.y", GameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.liftAnimation.setKeys(
       [
-        { frame: 0, value: PLACED_HEIGHT }, { frame: 50, value: LIFT_HEIGHT }
+        { frame: 0, value: this.board.getPlacementHeight() }, { frame: 50, value: LIFT_HEIGHT }
       ]
     );
     let liftEase = new CircleEase();
@@ -78,7 +78,7 @@ export abstract class Piece extends EngineAware {
     this.placeAnimation = new Animation("pawn_lift", "position.y", GameEngine.FRAMES_PER_SECOND, Animation.ANIMATIONTYPE_FLOAT);
     this.placeAnimation.setKeys(
       [
-        { frame: 0, value: LIFT_HEIGHT }, { frame: 30, value: PLACED_HEIGHT }
+        { frame: 0, value: LIFT_HEIGHT }, { frame: 30, value: this.board.getPlacementHeight() }
       ]
     );
     let placeEase = new BounceEase(3, 5);
@@ -178,7 +178,7 @@ export abstract class Piece extends EngineAware {
   }
 
   private vector2ToPlacedVector3(position: Vector2) {
-    return new Vector3(position.x, PLACED_HEIGHT, position.y);
+    return new Vector3(position.x, this.board.getPlacementHeight(), position.y);
   }
 
   public lift(onLiftAnimationEnd?: () => void) {

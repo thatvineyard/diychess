@@ -4,6 +4,7 @@ import { DebugInfo } from "./debugInfo";
 import { MaterialManager } from "./materialManager";
 import { GameGui } from "../gui/gui";
 import { GameManager } from "../game/gameManager";
+import { EnvironmentManager } from "../environment/environmentManager";
 
 export class GameEngine {
   public engineOptions: EngineOptions
@@ -12,12 +13,13 @@ export class GameEngine {
   public antialias: boolean
   public adaptToDeviceRatio: boolean
   public materialManager?: MaterialManager;
+  public environmentManager?: EnvironmentManager;
   public scene?: Scene;
   public babylonEngine?: Engine;
   static readonly FRAMES_PER_SECOND = 60;
   public awaitingInput = false;
   private gameGui?: GameGui;
-  private gameManager?: GameManager;
+  public gameManager?: GameManager;
 
   constructor() {
     this.engineOptions = {};
@@ -46,20 +48,19 @@ export class GameEngine {
     }
 
     this.materialManager = new MaterialManager(this);
+    this.environmentManager = new EnvironmentManager(this);
 
-    // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-    const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
-
-    // Default intensity is 1. Let's dim the light a small amount
-    light.intensity = 0.7;
 
     this.gameManager = new GameManager(this);
     this.gameGui = new GameGui(this.gameManager, this);
 
 
-    this.gameManager.startGame();
+    this.gameManager.setUpGame();
 
-    createCamera(scene);
+
+    createCamera(this);
+
+    this.gameManager.startGame();
     // this.debugInfo = new DebugInfo(scene);
   }
 

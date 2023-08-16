@@ -7,6 +7,8 @@ import { Piece } from "./piece/piece";
 import { CancelMove, CaptureMove, MoveTag } from "./piece/move";
 
 
+const SQUARE_HEIGHT = 0.05;
+
 export class Square extends TransformNode {
 
   private mesh: Mesh;
@@ -15,8 +17,9 @@ export class Square extends TransformNode {
   private scene: Scene;
   private pawn?: Piece;
   private gameManager: GameManager;
+  private placementHeight: number;
 
-  constructor(name: string, coordinate: Vector2, size: Vector2, material: StandardMaterial, board: Board, gameManager: GameManager, scene: Scene) {
+  constructor(name: string, coordinate: Vector2, size: Vector2, placementHeight: number, material: StandardMaterial, board: Board, gameManager: GameManager, scene: Scene) {
     super(name, scene);
     this.scene = scene;
 
@@ -25,6 +28,7 @@ export class Square extends TransformNode {
     this.gameManager = gameManager;
 
     this.coordinate = coordinate;
+    this.placementHeight = placementHeight;
 
     let position = this.board.getTilePosition(coordinate);
 
@@ -34,10 +38,11 @@ export class Square extends TransformNode {
   }
 
   private createTile(name: string, position: Vector2, size: Vector2, material: StandardMaterial, scene: Scene): Mesh {
-    const mesh = MeshBuilder.CreateBox(name, { height: 0.05, width: size.x, depth: size.y }, scene);
+    const mesh = MeshBuilder.CreateBox(name, { height: SQUARE_HEIGHT, width: size.x, depth: size.y }, scene);
     mesh.material = material;
-    mesh.position = new Vector3(position.x, 0, position.y);
+    mesh.position = new Vector3(position.x, this.placementHeight - (SQUARE_HEIGHT), position.y);
     mesh.parent = this;
+    mesh.receiveShadows = true;
     return mesh;
   }
 

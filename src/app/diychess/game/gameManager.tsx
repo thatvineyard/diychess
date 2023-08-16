@@ -32,6 +32,7 @@ export class GameManager {
 
   private gameEngine: GameEngine;
 
+  private gameInProgress: Boolean;
   private turnInProgress: Boolean;
 
   private gameEnded = false;
@@ -48,6 +49,7 @@ export class GameManager {
 
     this.board = this.createBoard();
 
+    this.gameInProgress = false;
     this.turnInProgress = false;
   }
 
@@ -55,15 +57,26 @@ export class GameManager {
     return new Board('board', BOARD_CONFIG, this, this.gameEngine);
   }
 
+  public addPlayer(name: string, side: PlayerSide) {
+    this.players.push(new Player(name, side));
+  }
 
-  public startGame() {
-    this.setUpNextRound();
+  public addCpuPlayer(name: string, side: PlayerSide) {
+    this.players.push(new CpuPlayer(name, side, this));
   }
 
   public renderLoop() {
-    if(!this.turnInProgress) {
+    if(this.gameInProgress && !this.turnInProgress) {
       this.startTurn();
     }
+  }
+
+  public setUpGame() {
+    this.setUpNextRound();
+  }
+
+  public startGame() {
+    this.gameInProgress = true;
   }
 
   public setUpNextRound() {
@@ -79,20 +92,18 @@ export class GameManager {
   }
 
   public registerMove(move: Move) {
-    this.currentRound?.activeTurn?.moves.push(move);
-    
+    this.currentRound?.registerMove(move); 
   }
 
   public getLatestMove() {
-    return this.currentRound!.getLatestMove();
+    if (!this.currentRound) {
+      throw new GameStateError("Round not set up yet.");
+    }
+    return this.currentRound.getLatestMove();
   }
 
   public getRound() {
     return this.currentRound;
-  }
-
-  public getTurn() {
-    return this.currentRound?.activeTurn;
   }
 
   public startTurn() {
@@ -108,7 +119,7 @@ export class GameManager {
 
   public endTurn() {
     if (!this.currentRound) {
-      throw new GameEngineError("Tried ending a turn when no round had been set up.");
+      throw new GameStateError("Round not set up yet.");
     }
 
     this.board.deselectPiece();
@@ -131,20 +142,9 @@ export class GameManager {
 
   public getCurrentPlayer() {
     if (!this.currentRound) {
-      throw new GameEngineError("Round not started");
+      throw new GameStateError("Round not set up yet.");
     }
-    if (!this.currentRound.activeTurn) {
-      throw new GameEngineError("Turn not started");
-    }
-    return this.currentRound.activeTurn.activePlayer;
-  }
-
-  public addPlayer(name: string, side: PlayerSide) {
-    this.players.push(new Player(name, side));
-  }
-
-  public addCpuPlayer(name: string, side: PlayerSide) {
-    this.players.push(new CpuPlayer(name, side, this));
+    return this.currentRound.getCurrentPlayer();
   }
 
   public reset() {
@@ -156,3 +156,5 @@ export class GameManager {
 
 
 export class GameRuleError extends Error { }
+
+export class GameStateError extends Error { }

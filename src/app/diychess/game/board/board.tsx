@@ -16,9 +16,11 @@ type BoardConfiguration = {
   borderSize: number;
 }
 
+const PLACE_HEIGHT = 0.1;
+
 export class Board extends TransformNode {
 
-  private pawns: Map<PlayerId, Piece[]> = new Map();
+  private pieces: Map<PlayerId, Piece[]> = new Map();
   public selectedPiece?: Piece;
   private gameEngine: GameEngine;
   public originTileIsBlack = true;
@@ -66,6 +68,10 @@ export class Board extends TransformNode {
     this.gameManager.setUpNextRound();
   }
 
+  public getPlacementHeight() {
+    return PLACE_HEIGHT;
+  }
+
   public foreachSquare(callback: (square: Square) => void) {
     var position = Vector2.Zero();
     for (position.x = 0; position.x < this.boardConfiguration.dimensions.x; position.x++) {
@@ -91,13 +97,13 @@ export class Board extends TransformNode {
 
   public foreachPawn(callback: (pawn: Piece) => void, player?: Player) {
     if (player == null) {
-      this.pawns.forEach((value) => {
+      this.pieces.forEach((value) => {
         value.forEach(callback);
       })
       return
     }
 
-    this.pawns.get(player.name)?.forEach(callback);
+    this.pieces.get(player.name)?.forEach(callback);
   }
 
   public capturePawn(square: Square) {
@@ -108,8 +114,8 @@ export class Board extends TransformNode {
     }
 
     let owningPlayer = pawn.owner;
-    let playerPawns = this.pawns.get(owningPlayer!.name)!;
-    this.pawns.set(owningPlayer!.name, playerPawns.filter((value) => value.currentSquare.coordinate != pawn!.currentSquare.coordinate));
+    let playerPawns = this.pieces.get(owningPlayer!.name)!;
+    this.pieces.set(owningPlayer!.name, playerPawns.filter((value) => value.currentSquare.coordinate != pawn!.currentSquare.coordinate));
 
     square.removePawn();
 
@@ -130,14 +136,14 @@ export class Board extends TransformNode {
       } else {
         material = this.gameEngine.materialManager!.boardMaterialGroup.blackSquare;
       }
-      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), material, this, this.gameManager, this.gameEngine.scene!));
+      this.squares.set(coordinate.toString(), new Square(this.getTileName(coordinate), coordinate.clone(), this.getSquareSize(), this.getPlacementHeight(), material, this, this.gameManager, this.gameEngine.scene!));
     })
   }
 
-  private createPawns(setUpWhiteRules: SquareSelectionRule[], setUpBlackRules: SquareSelectionRule[]) {
-    this.pawns = new Map();
-    this.pawns.set(this.gameManager.whitePlayer.name, []);
-    this.pawns.set(this.gameManager.blackPlayer.name, []);
+  private createPieces(setUpWhiteRules: SquareSelectionRule[], setUpBlackRules: SquareSelectionRule[]) {
+    this.pieces = new Map();
+    this.pieces.set(this.gameManager.whitePlayer.name, []);
+    this.pieces.set(this.gameManager.blackPlayer.name, []);
 
     this.foreachSquare((square: Square) => {
 
@@ -156,14 +162,14 @@ export class Board extends TransformNode {
       if (setUpWhite) {
         let piece = new CheckersPawn(this.gameManager.whitePlayer, this, square, this.gameManager, this.gameEngine);
         square.placePawn(piece);
-        this.pawns.get(this.gameManager.whitePlayer.name)?.push(piece);
+        this.pieces.get(this.gameManager.whitePlayer.name)?.push(piece);
         return;
       }
 
       if (setUpBlack) {
         let piece = new CheckersPawn(this.gameManager.blackPlayer, this, square, this.gameManager, this.gameEngine);
         square.placePawn(piece);
-        this.pawns.get(this.gameManager.blackPlayer.name)?.push(piece);
+        this.pieces.get(this.gameManager.blackPlayer.name)?.push(piece);
         return;
       }
     })
@@ -233,7 +239,6 @@ export class Board extends TransformNode {
   }
 
   setup() {
-
     let boardMat = new StandardMaterial("boardMat", this.gameEngine.scene);
     boardMat.diffuseColor = Color3.FromHexString("#522b22");
     const boardBoxMeshSize = this.boardConfiguration.meshSize
@@ -241,6 +246,9 @@ export class Board extends TransformNode {
     boardBox.parent = this;
     boardBox.position = Vector3.Up().scale(-0.5 / 2);
     boardBox.material = boardMat;
+
+    boardBox.receiveShadows = true;
+    this.gameEngine.environmentManager!.addShadowCaster(boardBox);
 
     this.createLabels();
 
@@ -250,7 +258,7 @@ export class Board extends TransformNode {
     var selectTopRanksRule = new SelectTopRanks(this, 2);
     var selectBottomRanksRule = new SelectBottomRanks(this, 2);
 
-    this.createPawns([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
+    this.createPieces([selectBottomRanksRule, selectWhiteSquares], [selectTopRanksRule, selectWhiteSquares]);
   }
 
   public selectPiece(piece: Piece) {
